@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafío Web Pro - 50 Segundos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        .pulse-effect {
+            animation: pulse 1s infinite;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(25, 135, 84, 1);
+            border-color: #198754 !important;
+            color: white !important;
+            background-color: #198754 !important;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .btn-opcion {
+            transition: all 0.2s ease;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            font-size: 1.1rem !important;
+            padding-left: 1.5rem !important;
+        }
+        
+        .fade-in { animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-dark text-light d-flex align-items-center justify-content-center vh-100">
+
+    <div class="container text-center">
+        <div class="card bg-secondary text-white shadow-lg p-4 mx-auto" style="max-width: 1000px; border-radius: 20px;">
+            
+            <div id="question-counter" class="text-warning fw-bold mb-2 fs-5">Preparando el desafío...</div>
+            <h2 id="question-text" class="mb-4 fw-bold fade-in" style="min-height: 80px;">Cargando...</h2>
+
+            <div id="fase-indicador" class="text-info fw-bold mb-1 fs-5 fade-in">Fase de lectura (20s)...</div>
+            <div class="display-1 fw-bold text-white mb-4" id="timer">00:50</div>
+
+            <div id="options-container" class="d-none mt-2 fade-in">
+                <div class="row g-3" id="options-grid">
+                    </div>
+            </div>
+
+            <div id="result-message" class="alert alert-success mt-4 d-none fs-4 fw-bold border-0 fade-in">
+                ¡Se reveló la respuesta correcta!
+            </div>
+
+            <div class="mt-4 d-flex justify-content-center gap-3">
+                <button id="start-btn" class="btn btn-warning btn-lg fw-bold px-5 py-3 rounded-pill">¡Iniciar Pregunta!</button>
+                <button id="next-btn" class="btn btn-info text-dark btn-lg fw-bold px-5 py-3 rounded-pill">Siguiente / Omitir ➔</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🧠 BASE DE DATOS DE PREGUNTAS
+        const bancoPreguntas = [
+            // --- ESTRUCTURA DE LA PÁGINA (Tus apuntes exactos) ---
+            { p: "Según la estructura vista en clase, ¿qué sección contiene el LOGO y el Menú de opciones?", opts: [{ t: "HEADER", c: true }, { t: "NAV", c: false }, { t: "TOPBAR", c: false }, { t: "MAIN", c: false }, { t: "HEAD", c: false }, { t: "SECTION", c: false }] },
+            { p: "¿Qué sección se utiliza específicamente para mostrar los menús adicionales de acceso directo (accesos rápidos)?", opts: [{ t: "SIDEBAR", c: true }, { t: "ASIDE", c: false }, { t: "NAVBAR", c: false }, { t: "MENU", c: false }, { t: "SHORTCUTS", c: false }, { t: "FOOTER", c: false }] },
+            { p: "El contenido principal de la página web (MAIN / CONTENT) está compuesto principalmente por:", opts: [{ t: "Secciones y artículos", c: true }, { t: "Divs y spans", c: false }, { t: "Headers y Footers", c: false }, { t: "Sidebars y Asides", c: false }, { t: "Tablas y listas", c: false }, { t: "Imágenes y textos", c: false }] },
+            { p: "¿Cuál es la función específica de la etiqueta SECTION según los apuntes?", opts: [{ t: "Categorizar contenido", c: true }, { t: "Mostrar el logo", c: false }, { t: "Crear accesos rápidos", c: false }, { t: "Cerrar la página", c: false }, { t: "Mostrar opciones secundarias", c: false }, { t: "Almacenar el CSS", c: false }] },
+            { p: "Si necesitas mostrar la INFORMACIÓN de la sección, la etiqueta correcta a usar es:", opts: [{ t: "ARTICLE", c: true }, { t: "PARAGRAPH", c: false }, { t: "INFO", c: false }, { t: "CONTENT", c: false }, { t: "DIV", c: false }, { t: "DATA", c: false }] },
+            { p: "¿Qué elemento es definido como 'la barra lateral que aparece en una web mostrando opciones secundarias diferentes a un sidebar'?", opts: [{ t: "ASIDE", c: true }, { t: "PANEL", c: false }, { t: "MENU-SEC", c: false }, { t: "FLOAT", c: false }, { t: "WIDGET", c: false }, { t: "SIDEBAR-2", c: false }] },
+            { p: "La parte final de una web, conocida como pie de página, se define con:", opts: [{ t: "FOOTER", c: true }, { t: "BOTTOM", c: false }, { t: "END", c: false }, { t: "BASE", c: false }, { t: "FOOT", c: false }, { t: "FINISH", c: false }] },
+            { p: "Si quieres poner los derechos de autor al final de todo el documento, ¿qué contenedor usas?", opts: [{ t: "FOOTER", c: true }, { t: "HEADER", c: false }, { t: "ASIDE", c: false }, { t: "ARTICLE", c: false }, { t: "SECTION", c: false }, { t: "MAIN", c: false }] },
+            { p: "Según la estructura, ¿dónde ubicarías principalmente un 'acceso rápido'?", opts: [{ t: "SIDEBAR", c: true }, { t: "FOOTER", c: false }, { t: "ARTICLE", c: false }, { t: "SECTION", c: false }, { t: "HEADER", c: false }, { t: "ASIDE", c: false }] },
+            { p: "Para englobar todo el contenido fuerte (compuesto de sections y articles), usamos:", opts: [{ t: "MAIN / CONTENT", c: true }, { t: "BODY-WRAPPER", c: false }, { t: "HEADER", c: false }, { t: "ASIDE", c: false }, { t: "FOOTER", c: false }, { t: "CONTAINER-ALL", c: false }] },
+
+            // --- INPUTS Y FORMULARIOS (Tipos dados en el prompt) ---
+            { p: "Para que un usuario ingrese su correo electrónico validando que tenga un @, usamos:", opts: [{ t: "<input type=\"email\">", c: true }, { t: "<input type=\"text\">", c: false }, { t: "<input type=\"mail\">", c: false }, { t: "<input type=\"correo\">", c: false }, { t: "<email>", c: false }, { t: "<input format=\"email\">", c: false }] },
+            { p: "¿Qué input oculta los caracteres tipeados por el usuario (ideal para claves)?", opts: [{ t: "<input type=\"password\">", c: true }, { t: "<input type=\"secret\">", c: false }, { t: "<input type=\"hidden\">", c: false }, { t: "<input type=\"mask\">", c: false }, { t: "<password>", c: false }, { t: "<input hide=\"true\">", c: false }] },
+            { p: "Si necesitas que el usuario ingrese exclusivamente valores numéricos, utilizas:", opts: [{ t: "<input type=\"number\">", c: true }, { t: "<input type=\"integer\">", c: false }, { t: "<input type=\"math\">", c: false }, { t: "<input type=\"digits\">", c: false }, { t: "<number>", c: false }, { t: "<input num=\"true\">", c: false }] },
+            { p: "Para mostrar un calendario interactivo y elegir una fecha, el input correcto es:", opts: [{ t: "<input type=\"date\">", c: true }, { t: "<input type=\"calendar\">", c: false }, { t: "<input type=\"day\">", c: false }, { t: "<input type=\"time\">", c: false }, { t: "<date>", c: false }, { t: "<input format=\"date\">", c: false }] },
+            { p: "El input que permite marcar o desmarcar una casilla individual es:", opts: [{ t: "<input type=\"checkbox\">", c: true }, { t: "<input type=\"check\">", c: false }, { t: "<input type=\"box\">", c: false }, { t: "<input type=\"tick\">", c: false }, { t: "<checkbox>", c: false }, { t: "<input type=\"radio\">", c: false }] },
+            { p: "Para que el usuario elija solo UNA opción dentro de un grupo excluyente, usamos:", opts: [{ t: "<input type=\"radio\">", c: true }, { t: "<input type=\"checkbox\">", c: false }, { t: "<input type=\"select\">", c: false }, { t: "<input type=\"circle\">", c: false }, { t: "<radio>", c: false }, { t: "<input type=\"one\">", c: false }] },
+            { p: "¿Cuál es la etiqueta principal para crear una lista desplegable de opciones?", opts: [{ t: "<select>", c: true }, { t: "<dropdown>", c: false }, { t: "<list>", c: false }, { t: "<options-menu>", c: false }, { t: "<combo>", c: false }, { t: "<input type=\"select\">", c: false }] },
+            { p: "Dentro de un <select>, ¿qué etiqueta define cada ítem que se puede elegir (como 'aa', 'bb', 'cc')?", opts: [{ t: "<option>", c: true }, { t: "<item>", c: false }, { t: "<li>", c: false }, { t: "<choice>", c: false }, { t: "<select-item>", c: false }, { t: "<value>", c: false }] },
+            { p: "Si solo requieres un campo para escribir palabras normales (como un nombre), usas:", opts: [{ t: "<input type=\"text\">", c: true }, { t: "<input type=\"string\">", c: false }, { t: "<input type=\"words\">", c: false }, { t: "<input type=\"char\">", c: false }, { t: "<text>", c: false }, { t: "<input type=\"name\">", c: false }] },
+            { p: "En el código provisto en clase, <option>aa</option> debe ir obligatoriamente dentro de un:", opts: [{ t: "<select>", c: true }, { t: "<ul>", c: false }, { t: "<form>", c: false }, { t: "<radio>", c: false }, { t: "<div>", c: false }, { t: "<options-list>", c: false }] },
+
+            // --- BOOTSTRAP: ESPACIADOS (PADDING) ---
+            { p: "La clase de Bootstrap 'pt-0' significa:", opts: [{ t: "Padding top 0", c: true }, { t: "Padding total 0", c: false }, { t: "Point top 0", c: false }, { t: "Position top 0", c: false }, { t: "Padding text 0", c: false }, { t: "Margin top 0", c: false }] },
+            { p: "Para aplicar espacio interno en la parte INFERIOR de un elemento, usamos la clase que inicia con:", opts: [{ t: "pb", c: true }, { t: "mb", c: false }, { t: "pd", c: false }, { t: "pi", c: false }, { t: "p-bottom", c: false }, { t: "pad-b", c: false }] },
+            { p: "En Bootstrap 5, la clase 'ps' significa:", opts: [{ t: "Padding start", c: true }, { t: "Padding side", c: false }, { t: "Padding south", c: false }, { t: "Padding small", c: false }, { t: "Position start", c: false }, { t: "Padding second", c: false }] },
+            { p: "Si quieres padding al final (derecha), la clase correcta de tus apuntes es:", opts: [{ t: "pe", c: true }, { t: "pr", c: false }, { t: "pd", c: false }, { t: "p-end", c: false }, { t: "pad-r", c: false }, { t: "padding-e", c: false }] },
+            { p: "¿Qué clase aplica padding horizontal (tanto start como end) al mismo tiempo con valor 5?", opts: [{ t: "px-5", c: true }, { t: "py-5", c: false }, { t: "p-5", c: false }, { t: "ps-pe-5", c: false }, { t: "ph-5", c: false }, { t: "pad-x-5", c: false }] },
+            { p: "Para quitar el padding en ambos lados horizontales, la clase es:", opts: [{ t: "px-0", c: true }, { t: "py-0", c: false }, { t: "p-0", c: false }, { t: "ps-0", c: false }, { t: "nopadding-x", c: false }, { t: "mx-0", c: false }] },
+            { p: "El 'padding start' (ps) reemplaza a la antigua clase que aplicaba padding a la:", opts: [{ t: "Izquierda", c: true }, { t: "Derecha", c: false }, { t: "Arriba", c: false }, { t: "Abajo", c: false }, { t: "Centro", c: false }, { t: "Totalidad", c: false }] },
+            { p: "Si un elemento tiene 'pb-5 pt-0', ¿cómo es su espacio interno?", opts: [{ t: "Mucho abajo, nada arriba", c: true }, { t: "Mucho arriba, nada abajo", c: false }, { t: "Mucho a la derecha, nada a la izquierda", c: false }, { t: "Sin márgenes", c: false }, { t: "Igual por todos lados", c: false }, { t: "Centrado", c: false }] },
+            { p: "El padding genera espacio...", opts: [{ t: "Interno (dentro del elemento)", c: true }, { t: "Externo (fuera del elemento)", c: false }, { t: "Entre páginas", c: false }, { t: "Solo en imágenes", c: false }, { t: "Oculto", c: false }, { t: "En la base de datos", c: false }] },
+            { p: "Para dar un padding final de nivel 5 usamos:", opts: [{ t: "pe-5", c: true }, { t: "pb-5", c: false }, { t: "ps-5", c: false }, { t: "pt-5", c: false }, { t: "px-5", c: false }, { t: "p-end-5", c: false }] },
+
+            // --- BOOTSTRAP: ESPACIADOS (MARGIN) ---
+            { p: "La clase de Bootstrap 'mt-0' significa:", opts: [{ t: "Margin top 0", c: true }, { t: "Margin total 0", c: false }, { t: "Padding top 0", c: false }, { t: "Move top 0", c: false }, { t: "Margin text 0", c: false }, { t: "Max top 0", c: false }] },
+            { p: "Para separar un elemento hacia ABAJO creando espacio externo, usamos:", opts: [{ t: "mb", c: true }, { t: "pb", c: false }, { t: "md", c: false }, { t: "m-bottom", c: false }, { t: "margin-d", c: false }, { t: "me", c: false }] },
+            { p: "En Bootstrap, 'ms' es la abreviatura de:", opts: [{ t: "Margin start", c: true }, { t: "Margin side", c: false }, { t: "Margin small", c: false }, { t: "Margin south", c: false }, { t: "Move start", c: false }, { t: "Padding start", c: false }] },
+            { p: "¿Qué clase elimina el margen izquierdo y derecho al mismo tiempo?", opts: [{ t: "mx-0", c: true }, { t: "my-0", c: false }, { t: "m-0", c: false }, { t: "ms-0", c: false }, { t: "nomargin-x", c: false }, { t: "px-0", c: false }] },
+            { p: "La clase 'me' aplica margen al:", opts: [{ t: "End (Final/Derecha)", c: true }, { t: "Start (Inicio/Izquierda)", c: false }, { t: "Top (Arriba)", c: false }, { t: "Bottom (Abajo)", c: false }, { t: "Centro", c: false }, { t: "Eje Y", c: false }] },
+            { p: "Diferencia principal entre mt y pt:", opts: [{ t: "mt es externo, pt es interno", c: true }, { t: "mt es interno, pt es externo", c: false }, { t: "mt es arriba, pt es abajo", c: false }, { t: "mt es margen, pt es posición", c: false }, { t: "mt es para texto, pt para cajas", c: false }, { t: "Son exactamente lo mismo", c: false }] },
+            { p: "Si un botón está muy pegado al texto que está a su izquierda, ¿qué clase le pones al botón para separarlo?", opts: [{ t: "ms", c: true }, { t: "me", c: false }, { t: "mb", c: false }, { t: "mt", c: false }, { t: "ps", c: false }, { t: "pt", c: false }] },
+            { p: "Si a un contenedor le aplicas mb-5, el espacio se creará:", opts: [{ t: "Debajo del contenedor", c: true }, { t: "Arriba del contenedor", c: false }, { t: "A los lados", c: false }, { t: "Dentro del contenedor", c: false }, { t: "En el centro", c: false }, { t: "Solo en pantallas grandes", c: false }] },
+            { p: "La letra 'x' en 'mx-0' representa el eje:", opts: [{ t: "Horizontal (izquierda/derecha)", c: true }, { t: "Vertical (arriba/abajo)", c: false }, { t: "Profundidad (Z)", c: false }, { t: "Diagonal", c: false }, { t: "Principal", c: false }, { t: "Externo", c: false }] },
+            { p: "La letra 'm' en las clases mt, mb, ms, me, significa:", opts: [{ t: "Margin", c: true }, { t: "Move", c: false }, { t: "Main", c: false }, { t: "Modal", c: false }, { t: "Make", c: false }, { t: "Model", c: false }] },
+
+            // --- CONTENIDO DE LAS DIAPOSITIVAS Y COMPONENTES (PPT) ---
+            { p: "En la lista de Componentes de Bootstrap de la clase, ¿cuál agrupa varios botones juntos?", opts: [{ t: "BUTTON GROUP", c: true }, { t: "CARD", c: false }, { t: "COLLAPSE", c: false }, { t: "DROPDOWN", c: false }, { t: "NAVBAR", c: false }, { t: "MODAL", c: false }] },
+            { p: "Según el material, el componente CARD de Bootstrap sirve para:", opts: [{ t: "Crear tarjetas flexibles con contenido", c: true }, { t: "Agrupar botones", c: false }, { t: "Crear menús de navegación", c: false }, { t: "Abrir ventanas emergentes", c: false }, { t: "Mostrar imágenes que pasan solas", c: false }, { t: "Ocultar texto", c: false }] },
+            { p: "¿Cómo se llama el componente de Bootstrap en la clase para crear una galería de imágenes o diapositivas deslizantes?", opts: [{ t: "CARROUSEL / CAROUSEL", c: true }, { t: "MODAL", c: false }, { t: "DROPDOWN", c: false }, { t: "CARD", c: false }, { t: "COLLAPSE", c: false }, { t: "SLIDER", c: false }] },
+            { p: "El componente de Bootstrap llamado COLLAPSE se usa para:", opts: [{ t: "Ocultar y mostrar contenido (ej: acordeones)", c: true }, { t: "Crear una barra de navegación", c: false }, { t: "Agrupar botones", c: false }, { t: "Mostrar un carrusel", c: false }, { t: "Abrir un modal", c: false }, { t: "Crear menús desplegables de enlaces", c: false }] },
+            { p: "¿Qué componente de Bootstrap es un menú desplegable (lista de enlaces) que se activa al hacer clic?", opts: [{ t: "DROPDOWN", c: true }, { t: "MODAL", c: false }, { t: "CAROUSEL", c: false }, { t: "CARD", c: false }, { t: "NAVBAR", c: false }, { t: "BUTTON GROUP", c: false }] },
+            { p: "Si necesitas que aparezca una ventana emergente en el centro de la pantalla, el componente de la clase es:", opts: [{ t: "MODAL", c: true }, { t: "DROPDOWN", c: false }, { t: "COLLAPSE", c: false }, { t: "NAVBAR", c: false }, { t: "POPUP", c: false }, { t: "CARD", c: false }] },
+            { p: "El componente NAVBAR mencionado en el PPT se refiere a:", opts: [{ t: "La barra de navegación principal", c: true }, { t: "Un grupo de botones", c: false }, { t: "Una ventana emergente", c: false }, { t: "Un contenedor de tarjetas", c: false }, { t: "Una galería de fotos", c: false }, { t: "Un menú colapsable lateral", c: false }] },
+
+            // --- PREGUNTAS COMBINADAS Y DE REPASO ---
+            { p: "Si aplicas `mx-0 px-5` a una etiqueta SECTION, ¿qué estás haciendo?", opts: [{ t: "Quitando margen horizontal y dando mucho padding horizontal", c: true }, { t: "Quitando padding y dando margen", c: false }, { t: "Dando padding arriba y abajo", c: false }, { t: "Ocultando la sección", c: false }, { t: "Centrando la sección", c: false }, { t: "Alineando el texto a la derecha", c: false }] },
+            { p: "Tienes un `<input type=\"date\">` y quieres separarlo del botón que está a su derecha. Usas la clase:", opts: [{ t: "me", c: true }, { t: "mt", c: false }, { t: "mb", c: false }, { t: "ps", c: false }, { t: "pt", c: false }, { t: "px", c: false }] },
+            { p: "Quieres hacer un cuestionario como este. ¿Qué input es ideal para que el usuario elija solo una respuesta A, B, C o D?", opts: [{ t: "<input type=\"radio\">", c: true }, { t: "<input type=\"checkbox\">", c: false }, { t: "<input type=\"text\">", c: false }, { t: "<select>", c: false }, { t: "<input type=\"password\">", c: false }, { t: "<input type=\"number\">", c: false }] },
+            { p: "Para crear la estructura básica de la página, el HEADER y el FOOTER van normalmente...", opts: [{ t: "Fuera de la etiqueta MAIN", c: true }, { t: "Dentro de la etiqueta MAIN", c: false }, { t: "Dentro de la etiqueta SECTION", c: false }, { t: "Ocultos en el CSS", c: false }, { t: "Dentro de un INPUT", c: false }, { t: "En la etiqueta ASIDE", c: false }] },
+            { p: "La URL `https://getbootstrap.com/docs/5.3/components/dropdowns/` vista en clase, te enseña a crear:", opts: [{ t: "Menús desplegables", c: true }, { t: "Ventanas emergentes", c: false }, { t: "Carruseles de imágenes", c: false }, { t: "Barras de navegación", c: false }, { t: "Grupos de botones", c: false }, { t: "Tarjetas de contenido", c: false }] },
+            { p: "Si el docente te pide un input para ingresar un precio (sin letras), debes usar:", opts: [{ t: "type=\"number\"", c: true }, { t: "type=\"text\"", c: false }, { t: "type=\"email\"", c: false }, { t: "type=\"password\"", c: false }, { t: "type=\"radio\"", c: false }, { t: "type=\"date\"", c: false }] },
+            { p: "¿Cuál de estos componentes de Bootstrap REQUIERE interacción del usuario para revelar contenido oculto?", opts: [{ t: "MODAL y COLLAPSE", c: true }, { t: "CARD y BUTTON GROUP", c: false }, { t: "CAROUSEL y NAV", c: false }, { t: "HEADER y FOOTER", c: false }, { t: "SECTION y ARTICLE", c: false }, { t: "ASIDE y MAIN", c: false }] },
+            { p: "Si un formulario requiere elegir el Año de Nacimiento desde un calendario, usas:", opts: [{ t: "type=\"date\"", c: true }, { t: "type=\"number\"", c: false }, { t: "type=\"text\"", c: false }, { t: "type=\"checkbox\"", c: false }, { t: "<select>", c: false }, { t: "type=\"radio\"", c: false }] },
+            { p: "La parte de la clase llamada 'Instalación de ESTILOS' se refiere al uso de:", opts: [{ t: "CSS", c: true }, { t: "HTML Puro", c: false }, { t: "Java", c: false }, { t: "Alice", c: false }, { t: "PHP", c: false }, { t: "Inputs", c: false }] },
+            { p: "Para englobar opciones secundarias que no son parte del flujo principal de un ARTICLE, se recomienda:", opts: [{ t: "ASIDE", c: true }, { t: "HEADER", c: false }, { t: "MAIN", c: false }, { t: "FOOTER", c: false }, { t: "NAV", c: false }, { t: "BUTTON GROUP", c: false }] },
+
+            { 
+                p: "Para que un input tradicional (como type='text') tome instantáneamente el diseño, bordes y espaciado moderno de Bootstrap 5, ¿qué clase le aplicas?", 
+                opts: [
+                    { t: "form-control", c: true }, 
+                    { t: "input-bootstrap", c: false }, 
+                    { t: "form-input", c: false }, 
+                    { t: "input-control", c: false }, 
+                    { t: "form-style", c: false }, 
+                    { t: "bs-input", c: false }
+                ] 
+            },
+            { 
+                p: "Si quieres que un usuario pueda seleccionar MÁS DE UNA opción al mismo tiempo (por ejemplo, sus hobbies o intereses), utilizas:", 
+                opts: [
+                    { t: "type=\"checkbox\"", c: true }, 
+                    { t: "type=\"radio\"", c: false }, 
+                    { t: "type=\"multiple\"", c: false }, 
+                    { t: "type=\"select\"", c: false }, 
+                    { t: "type=\"check\"", c: false }, 
+                    { t: "type=\"options\"", c: false }
+                ] 
+            },
+            { 
+                p: "Para un campo de 'Método de Pago' donde el usuario SOLO PUEDE MARCAR UNA opción y las demás se desmarcan solas, usas:", 
+                opts: [
+                    { t: "type=\"radio\"", c: true }, 
+                    { t: "type=\"checkbox\"", c: false }, 
+                    { t: "type=\"single\"", c: false }, 
+                    { t: "type=\"circle\"", c: false }, 
+                    { t: "type=\"select-one\"", c: false }, 
+                    { t: "type=\"unique\"", c: false }
+                ] 
+            },
+            { 
+                p: "¡Cuidado aquí! ¿Qué atributo debe ser IDÉNTICO en varios inputs type='radio' para que el navegador entienda que pertenecen al mismo grupo y solo deje elegir uno?", 
+                opts: [
+                    { t: "name", c: true }, 
+                    { t: "id", c: false }, 
+                    { t: "class", c: false }, 
+                    { t: "value", c: false }, 
+                    { t: "type", c: false }, 
+                    { t: "group", c: false }
+                ] 
+            },
+            { 
+                p: "Para vincular un texto (<label>) con su <input> (de modo que al hacer clic en el texto se seleccione la cajita), ¿qué atributos deben coincidir exactamente?", 
+                opts: [
+                    { t: "El 'for' del label y el 'id' del input", c: true }, 
+                    { t: "El 'name' del label y el 'name' del input", c: false }, 
+                    { t: "El 'class' del label y el 'id' del input", c: false }, 
+                    { t: "El 'id' de ambos", c: false }, 
+                    { t: "El 'for' de ambos", c: false }, 
+                    { t: "No es posible vincularlos", c: false }
+                ] 
+            },
+            { 
+                p: "¿Qué etiqueta padre es indispensable para envolver todos tus inputs, selects y botones si quieres enviar esos datos a un servidor?", 
+                opts: [
+                    { t: "<form>", c: true }, 
+                    { t: "<inputs>", c: false }, 
+                    { t: "<send-data>", c: false }, 
+                    { t: "<group>", c: false }, 
+                    { t: "<div>", c: false }, 
+                    { t: "<form-group>", c: false }
+                ] 
+            },
+            { 
+                p: "¿Qué atributo guarda la 'información real y oculta' que se enviará a la base de datos cuando el usuario marca un <option> o un radio?", 
+                opts: [
+                    { t: "value", c: true }, 
+                    { t: "name", c: false }, 
+                    { t: "data", c: false }, 
+                    { t: "id", c: false }, 
+                    { t: "send", c: false }, 
+                    { t: "info", c: false }
+                ] 
+            },
+            { 
+                p: "El botón final que el usuario presiona para procesar y enviar toda la información del <form> debe tener el tipo:", 
+                opts: [
+                    { t: "type=\"submit\"", c: true }, 
+                    { t: "type=\"send\"", c: false }, 
+                    { t: "type=\"button\"", c: false }, 
+                    { t: "type=\"go\"", c: false }, 
+                    { t: "type=\"action\"", c: false }, 
+                    { t: "type=\"enter\"", c: false }
+                ] 
+            },
+            { 
+                p: "Si necesitas que el usuario escriba un comentario largo de VARIAS LÍNEAS (como un mensaje de contacto), en lugar de un <input type='text'> debes usar:", 
+                opts: [
+                    { t: "<textarea>", c: true }, 
+                    { t: "<input type=\"longtext\">", c: false }, 
+                    { t: "<input type=\"paragraph\">", c: false }, 
+                    { t: "<textblock>", c: false }, 
+                    { t: "<message>", c: false }, 
+                    { t: "<input type=\"box\">", c: false }
+                ] 
+            },
+            { 
+                p: "En un formulario Bootstrap 5, si quieres agrupar un label y un input controlados de forma ordenada, la documentación recomienda usar:", 
+                opts: [
+                    { t: "Un div normal con clase 'mb-3' (margin bottom)", c: true }, 
+                    { t: "La etiqueta <form-group>", c: false }, 
+                    { t: "Un <section> por cada input", c: false }, 
+                    { t: "Una tabla obligatoriamente", c: false }, 
+                    { t: "La clase 'form-wrapper'", c: false }, 
+                    { t: "Etiquetas <br> repetidas", c: false }
+                ] 
+            }
+
+        ];
+
+        let preguntasMezcladas = [];
+        let indexActual = 0;
+        let timeLeft = 50; // INICIA EN 50 SEGUNDOS
+        let timerId;
+
+        // ==========================================
+        // 🎵 MOTOR DE SONIDO (Web Audio API)
+        // ==========================================
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playTick(isSuspense = false) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = isSuspense ? 'square' : 'sine';
+            osc.frequency.setValueAtTime(isSuspense ? 300 : 800, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(isSuspense ? 0.15 : 0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playReveal() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.5);
+            
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1);
+        }
+
+        function escaparHTML(texto) {
+            return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function mezclar(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function iniciarJuego() {
+            // 1. Mezclamos TODAS las preguntas del banco (las 50)
+            let todasMezcladas = mezclar([...bancoPreguntas]);
+            
+            // 2. Usamos slice(0, 20) para recortar la lista y quedarnos SOLO con 20
+            preguntasMezcladas = todasMezcladas.slice(0, 20);
+            
+            // 3. Iniciamos desde la pregunta 0
+            indexActual = 0;
+            
+            cargarPregunta();            
+        }
+
+        function cargarPregunta() {
+            clearInterval(timerId);
+
+            const data = preguntasMezcladas[indexActual];
+            const opcionesMezcladas = mezclar([...data.opts]);
+
+            document.getElementById('question-counter').textContent = `Pregunta ${indexActual + 1} de ${preguntasMezcladas.length}`;
+            document.getElementById('question-text').textContent = data.p;
+            
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = ''; 
+
+            opcionesMezcladas.forEach((opt, i) => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4'; 
+                const textoSeguro = escaparHTML(opt.t);
+                
+                col.innerHTML = `<button class="btn btn-outline-light w-100 fw-bold btn-opcion" 
+                                 id="opt-${i}" data-correct="${opt.c}" disabled>
+                                 <span class="badge bg-light text-dark me-3 fs-5">${i + 1}</span> ${textoSeguro}
+                                 </button>`;
+                grid.appendChild(col);
+            });
+
+            document.getElementById('options-container').classList.add('d-none');
+            document.getElementById('result-message').classList.add('d-none');
+            document.getElementById('start-btn').classList.remove('d-none');
+            
+            const indicador = document.getElementById('fase-indicador');
+            indicador.textContent = "Fase de lectura (Botones ocultos)";
+            indicador.className = "text-info fw-bold mb-1 fs-5 fade-in";
+
+            document.getElementById('next-btn').textContent = "Siguiente / Omitir ➔";
+
+            timeLeft = 50; // REINICIA A 50
+            actualizarReloj();
+            document.getElementById('timer').className = "display-1 fw-bold text-white mb-4";
+        }
+
+        function actualizarReloj() {
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            document.getElementById('timer').textContent = `0${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            initAudio(); 
+            document.getElementById('start-btn').classList.add('d-none');
+            
+            timerId = setInterval(() => {
+                timeLeft--;
+                actualizarReloj();
+
+                // FASE 1: LECTURA (50s a 30s) - 20 segundos
+                if (timeLeft > 30 && timeLeft <= 50) {
+                    playTick(false); 
+                }
+
+                // FASE DE MARCAR (30s) - 30 segundos
+                if (timeLeft === 30) {
+                    document.getElementById('options-container').classList.remove('d-none');
+                    document.getElementById('timer').classList.add('text-warning');
+                    document.getElementById('fase-indicador').textContent = "¡A ESCRIBIR / MARCAR! (30s)";
+                    document.getElementById('fase-indicador').classList.replace('text-info', 'text-warning');
+                    
+                    document.querySelectorAll('.btn-opcion').forEach(b => {
+                        b.disabled = false;
+                        b.addEventListener('click', function() {
+                            document.querySelectorAll('.btn-opcion').forEach(btn => btn.classList.remove('bg-light', 'text-dark'));
+                            this.classList.add('bg-light', 'text-dark');
+                        });
+                    });
+                }
+
+                // FASE DE SUSPENSO (30s a 10s)
+                if (timeLeft <= 30 && timeLeft > 10) {
+                    playTick(false);
+                }
+
+                // ÚLTIMOS 10s
+                if (timeLeft === 10) {
+                    document.getElementById('timer').classList.replace('text-warning', 'text-danger');
+                    document.getElementById('fase-indicador').textContent = "¡ÚLTIMOS 10 SEGUNDOS!";
+                    document.getElementById('fase-indicador').classList.replace('text-warning', 'text-danger');
+                }
+                
+                if (timeLeft <= 10 && timeLeft > 0) {
+                    playTick(true); 
+                }
+
+                // REVELAR (0s)
+                if (timeLeft === 0) {
+                    clearInterval(timerId);
+                    document.getElementById('fase-indicador').textContent = "Analizando la respuesta...";
+                    revelar(); 
+                }
+            }, 1000);
+        });
+
+        function revelar() {
+            playReveal(); 
+            
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 },
+                zIndex: 1050
+            });
+
+            const botones = document.querySelectorAll('.btn-opcion');
+            botones.forEach(btn => {
+                btn.disabled = true;
+                if (btn.getAttribute('data-correct') === 'true') {
+                    btn.classList.remove('bg-light', 'text-dark'); 
+                    btn.classList.add('pulse-effect');
+                } else {
+                    btn.style.opacity = '0.2';
+                }
+            });
+
+            document.getElementById('result-message').classList.remove('d-none');
+            
+            const nextBtn = document.getElementById('next-btn');
+            if (indexActual === preguntasMezcladas.length - 1) {
+                nextBtn.textContent = "¡Terminar Desafío!";
+            } else {
+                nextBtn.textContent = "Siguiente Pregunta ➔";
+            }
+        }
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (indexActual < preguntasMezcladas.length - 1) {
+                indexActual++;
+                cargarPregunta();
+            } else {
+                alert("¡Felicidades! Has completado el cuestionario de hoy.");
+                location.reload(); 
+            }
+        });
+
+        iniciarJuego();
+    </script>
+</body>
+</html>
