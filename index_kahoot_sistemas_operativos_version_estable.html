@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desafío Kahoot | Sistemas Operativos y Comunicación de Datos</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+        .pulse-effect {
+            animation: pulse 1s infinite;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(25, 135, 84, 1);
+            border-color: #198754 !important;
+            color: white !important;
+            background-color: #198754 !important;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .btn-opcion {
+            transition: all 0.2s ease;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            font-size: 1.1rem !important;
+            padding-left: 1.5rem !important;
+        }
+        
+        .fade-in { animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+        body { min-height:100vh; padding:24px 0; }
+        .main-card { max-width:1000px; border-radius:20px; border:1px solid rgba(255,255,255,.12); }
+        #question-text { min-height:90px; display:flex; align-items:center; justify-content:center; }
+        .btn-opcion { min-height:80px; white-space:normal; text-align:left; }
+        .btn-opcion:disabled { opacity:1; }
+        .btn-opcion.selected-answer { background:#ffc107!important; color:#212529!important; border-color:#ffc107!important; }
+        .btn-opcion.correct-answer { background:#198754!important; color:white!important; border-color:#198754!important; }
+        .btn-opcion.wrong-answer { opacity:.28!important; }
+        #timer { font-variant-numeric:tabular-nums; }
+        .score-panel { background:#212529; border:1px solid rgba(255,255,255,.15); border-radius:16px; padding:22px; }
+        .score-number { font-size:clamp(3.5rem,10vw,6rem); line-height:1; color:#ffc107; font-weight:900; }
+        .mini-stat { background:rgba(255,255,255,.08); border-radius:12px; padding:14px; }
+        .mini-stat strong { display:block; font-size:1.6rem; color:#0dcaf0; }
+        .mini-stat span { font-size:.85rem; color:#ddd; }
+        .progress { height:9px; background:#343a40; }
+        .progress-bar { background:#0dcaf0; }
+        @media(max-width:767px) {
+          body { padding:10px 0; }
+          .main-card { padding:1.25rem!important; }
+          .btn-opcion { min-height:62px; font-size:.95rem!important; }
+          #question-text { min-height:110px; font-size:1.25rem; }
+          #timer { font-size:4rem!important; }
+        }
+
+
+        html, body { user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+        img, a { -webkit-user-drag:none; user-drag:none; }
+        #integrity-status { background:#343a40!important; }
+        body:fullscreen { overflow-y:auto; }
+        body:-webkit-full-screen { overflow-y:auto; }
+
+</style>
+</head>
+<body class="bg-dark text-light d-flex align-items-center justify-content-center">
+<div class="container text-center">
+  <div class="card bg-secondary text-white shadow-lg p-4 mx-auto main-card">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div class="badge bg-warning text-dark fs-6 px-3 py-2">DESAFÍO DE CONOCIMIENTOS</div>
+      <div class="badge bg-info text-dark fs-6 px-3 py-2">40 PREGUNTAS · NOTA SOBRE 20</div>
+    </div>
+
+    <div id="integrity-status" class="alert alert-dark border border-info text-start py-2 mb-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><strong class="text-info">MODO SUPERVISADO</strong> · Pantalla completa · Clic derecho y copiar bloqueados</span>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge bg-warning text-dark">Incidencias: <span id="incident-count">0</span></span>
+          <span class="badge bg-danger">Salidas de página: <span id="page-exit-count">0</span></span>
+        </div>
+      </div>
+      <div id="integrity-warning" class="small text-warning mt-1 d-none"></div>
+    </div>
+
+    <div id="fullscreen-return" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark d-flex align-items-center justify-content-center p-3" style="z-index:3000">
+      <div class="card bg-secondary text-white p-4 text-center shadow-lg" style="max-width:560px">
+        <h2 class="text-warning fw-bold">Vuelve a pantalla completa</h2>
+        <p id="fullscreen-return-message" class="fs-5">Se detectó que saliste de la pantalla completa. Pulsa el botón para continuar.</p>
+        <button id="fullscreen-return-btn" class="btn btn-warning btn-lg fw-bold rounded-pill px-4">VOLVER A PANTALLA COMPLETA</button>
+      </div>
+    </div>
+    <div id="void-screen" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark d-flex align-items-center justify-content-center p-3" style="z-index:3100">
+      <div class="card bg-secondary text-white p-4 text-center shadow-lg" style="max-width:620px">
+        <h2 class="text-danger fw-bold">PRUEBA ANULADA</h2>
+        <p class="fs-5">La evaluación se anuló al registrar 3 salidas de la ventana o de la pantalla completa.</p>
+        <div class="fs-5 mb-3">Estudiante: <strong id="void-student-name"></strong></div>
+        <div class="fs-5 mb-4">Salidas registradas: <strong id="void-exit-count">3</strong></div>
+        <button id="void-restart-btn" class="btn btn-warning btn-lg fw-bold rounded-pill px-4">VOLVER AL INICIO</button>
+      </div>
+    </div>
+
+    <div id="welcome-screen">
+      <div class="py-4">
+        <div class="display-4 mb-3">🎓</div>
+        <h2 class="fw-bold text-warning mb-3">Antes de comenzar</h2>
+        <p class="fs-5 mb-4">Escribe tus nombres y apellidos para registrar tu evaluación.</p>
+        <div class="mx-auto" style="max-width:520px">
+          <input id="student-name" type="text" class="form-control form-control-lg text-center"
+                 placeholder="Nombres y apellidos" maxlength="100" autocomplete="name">
+          <div id="name-error" class="text-warning small mt-2 d-none">Ingresa tu nombre para iniciar la prueba.</div>
+          <button id="begin-exam-btn" class="btn btn-warning btn-lg fw-bold px-5 py-3 rounded-pill mt-4">
+            INICIAR PRUEBA
+          </button>
+        </div>
+        <div class="small text-light mt-4">40 preguntas · Nota sobre 20 · Avance automático</div>
+      </div>
+    </div>
+
+    <div id="game-screen">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div id="student-name-display" class="badge bg-info text-dark fs-6 px-3 py-2">Estudiante</div>
+        <div id="question-counter" class="text-warning fw-bold fs-5">Preparando el desafío...</div>
+      </div>
+      <div class="progress mb-3"><div id="progress-bar" class="progress-bar" style="width:0%"></div></div>
+      <h2 id="question-text" class="mb-4 fw-bold fade-in">Cargando...</h2>
+      <div id="fase-indicador" class="text-info fw-bold mb-1 fs-5 fade-in">Fase de lectura (7 segundos)...</div>
+      <div class="display-1 fw-bold text-white mb-4" id="timer">00:27</div>
+      <div id="options-container" class="d-none mt-2 fade-in">
+        <div class="row g-3" id="options-grid"></div>
+      </div>
+      <div id="result-message" class="alert alert-success mt-4 d-none fs-4 fw-bold border-0 fade-in">¡Se reveló la respuesta correcta!</div>
+
+      <div class="small text-light mt-3">7 segundos para leer · 20 segundos para marcar · Avance automático entre preguntas</div>
+    </div>
+
+    <div id="final-screen" class="d-none">
+      <div class="text-warning fw-bold mb-2 fs-5">¡DESAFÍO COMPLETADO!</div>
+      <h2 class="fw-bold mb-2">Resultado final</h2>
+      <div id="final-student-name" class="text-info fs-5 fw-bold mb-3"></div>
+      <div class="score-panel">
+        <div class="small text-uppercase text-light mb-2">Tu nota final</div>
+        <div class="score-number"><span id="final-grade">0.0</span><span class="fs-3 text-white"> / 20</span></div>
+        <div id="grade-message" class="fs-5 fw-bold text-info mt-3"></div>
+        <div class="row g-3 mt-3">
+          <div class="col-4"><div class="mini-stat"><strong id="correct-total">0</strong><span>Correctas</span></div></div>
+          <div class="col-4"><div class="mini-stat"><strong id="wrong-total">0</strong><span>Incorrectas</span></div></div>
+          <div class="col-4"><div class="mini-stat"><strong id="percent-total">0%</strong><span>Rendimiento</span></div></div>
+          <div class="col-6"><div class="mini-stat"><strong id="final-incidents">0</strong><span>Incidencias totales</span></div></div>
+          <div class="col-6"><div class="mini-stat"><strong id="final-page-exits">0</strong><span>Salidas de la página</span></div></div>
+        </div>
+      </div>
+      <p class="mt-3 mb-1">Cada respuesta correcta vale <strong>0.5 puntos</strong>.</p>
+      <p class="small text-light">Nota = (respuestas correctas ÷ 40) × 20</p>
+      <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+        <button id="export-result-btn" class="btn btn-info text-dark btn-lg fw-bold px-4 py-3 rounded-pill">Descargar resultado CSV</button>
+        <button id="restart-btn" class="btn btn-warning btn-lg fw-bold px-5 py-3 rounded-pill">Volver a jugar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const bancoPreguntas = [{"c": "Componentes de la computadora", "q": "¿Qué componente ejecuta las instrucciones de los programas y realiza operaciones de procesamiento?", "a": ["Procesador (CPU)", "Memoria RAM", "Disco SSD", "Fuente de poder", "Router", "Sistema operativo"], "k": 0}, {"c": "Componentes de la computadora", "q": "¿Qué tipo de memoria almacena temporalmente los datos de los programas que están en uso?", "a": ["Disco duro", "Memoria RAM", "Memoria USB", "Tarjeta gráfica", "Router", "Sistema operativo"], "k": 1}, {"c": "Componentes de la computadora", "q": "¿Qué sucede con la información que está únicamente en la memoria RAM cuando se apaga el equipo?", "a": ["Se conserva indefinidamente", "Se copia automáticamente al SSD", "Se pierde porque es volátil", "Se almacena en la BIOS", "Router", "Sistema operativo"], "k": 2}, {"c": "Componentes de la computadora", "q": "¿Cuál es la función principal de un disco SSD o HDD?", "a": ["Mostrar imágenes", "Conectar el equipo a Internet", "Procesar instrucciones", "Almacenar archivos y programas", "Router", "Sistema operativo"], "k": 3}, {"c": "Componentes de la computadora", "q": "¿Qué componente conecta los componentes internos y permite su comunicación?", "a": ["Placa madre", "Monitor", "Teclado", "Fuente de poder", "Router", "Sistema operativo"], "k": 0}, {"c": "Componentes de la computadora", "q": "¿Cuál es la función de la fuente de poder?", "a": ["Guardar documentos", "Suministrar energía eléctrica a los componentes", "Ejecutar el sistema operativo", "Conectar redes inalámbricas", "Router", "Sistema operativo"], "k": 1}, {"c": "Componentes de la computadora", "q": "¿Cuál de los siguientes es un dispositivo de entrada?", "a": ["Monitor", "Parlante", "Teclado", "Proyector", "Router", "Sistema operativo"], "k": 2}, {"c": "Componentes de la computadora", "q": "¿Cuál de estos dispositivos se utiliza principalmente para mostrar información al usuario?", "a": ["Mouse", "Micrófono", "Escáner", "Monitor", "Router", "Sistema operativo"], "k": 3}, {"c": "Instalación de sistema operativo", "q": "Antes de instalar o reinstalar un sistema operativo, ¿qué acción es recomendable realizar?", "a": ["Respaldar los archivos importantes", "Eliminar todos los controladores", "Desconectar el monitor", "Borrar la memoria RAM", "Dirección MAC", "Comando ping"], "k": 0}, {"c": "Instalación de sistema operativo", "q": "¿Qué se necesita normalmente para instalar Windows desde cero en una computadora?", "a": ["Un archivo de texto", "Un USB booteable con el instalador", "Una dirección MAC nueva", "Un cable HDMI especial", "Dirección MAC", "Comando ping"], "k": 1}, {"c": "Instalación de sistema operativo", "q": "¿Qué significa que una memoria USB sea booteable?", "a": ["Que tiene mayor capacidad", "Que funciona como memoria RAM", "Que puede iniciar el equipo y cargar un instalador", "Que solo almacena fotografías", "Dirección MAC", "Comando ping"], "k": 2}, {"c": "Instalación de sistema operativo", "q": "¿Para qué se configura el orden de arranque (Boot Order) en BIOS/UEFI?", "a": ["Para cambiar el nombre del usuario", "Para aumentar la memoria RAM", "Para modificar la dirección MAC", "Para indicar desde qué dispositivo iniciará el equipo", "Dirección MAC", "Comando ping"], "k": 3}, {"c": "Instalación de sistema operativo", "q": "Si deseas iniciar el instalador desde un USB, ¿qué debes seleccionar en el menú de arranque?", "a": ["La memoria USB", "El disco de datos que no contiene el instalador", "El teclado", "La impresora", "Dirección MAC", "Comando ping"], "k": 0}, {"c": "Instalación de sistema operativo", "q": "Durante la instalación, ¿qué permite hacer la herramienta de particionado del disco?", "a": ["Cambiar la dirección IP", "Crear o administrar divisiones del almacenamiento", "Reparar físicamente el procesador", "Aumentar la velocidad del monitor", "Dirección MAC", "Comando ping"], "k": 1}, {"c": "Instalación de sistema operativo", "q": "¿Qué riesgo existe al formatear una partición que contiene archivos personales?", "a": ["Se duplica la información", "Se instala automáticamente otro programa", "Se pueden perder los archivos almacenados allí", "Se cambia la dirección MAC", "Dirección MAC", "Comando ping"], "k": 2}, {"c": "Instalación de sistema operativo", "q": "¿Qué es un controlador o driver después de instalar el sistema operativo?", "a": ["Un tipo de cable de red", "Una partición del disco", "Un programa para crear carpetas", "Software que permite al sistema comunicarse con un dispositivo", "Dirección MAC", "Comando ping"], "k": 3}, {"c": "Instalación de sistema operativo", "q": "Después de instalar el sistema operativo, ¿qué acción ayuda a corregir fallos y mejorar la seguridad?", "a": ["Instalar las actualizaciones del sistema", "Eliminar la carpeta del sistema", "Desactivar todos los dispositivos", "Borrar los archivos de arranque", "Dirección MAC", "Comando ping"], "k": 0}, {"c": "Instalación de sistema operativo", "q": "¿Cuál es el objetivo de instalar los drivers de red?", "a": ["Cambiar el fondo de pantalla", "Permitir que el sistema operativo utilice correctamente el adaptador de red", "Crear particiones", "Aumentar el tamaño del disco", "Dirección MAC", "Comando ping"], "k": 1}, {"c": "Instalación de sistema operativo", "q": "Al finalizar la instalación del sistema operativo, ¿qué conviene comprobar?", "a": ["Que el USB siga siendo el primer dispositivo de arranque", "Que el disco esté desconectado", "Que funcionen los dispositivos, la red y las actualizaciones", "Que no exista ningún usuario", "Dirección MAC", "Comando ping"], "k": 2}, {"c": "Instalación de sistema operativo", "q": "¿Qué función cumple BIOS/UEFI durante el inicio de una computadora?", "a": ["Editar documentos", "Navegar por Internet", "Crear usuarios de correo", "Inicializar el hardware y permitir el proceso de arranque", "Dirección MAC", "Comando ping"], "k": 3}, {"c": "Terminal y comandos", "q": "En Windows, ¿qué comando permite visualizar los archivos y directorios de la ubicación actual?", "a": ["dir", "mkdir", "touch", "nano", "BIOS/UEFI", "Memoria RAM"], "k": 0}, {"c": "Terminal y comandos", "q": "En Linux, ¿qué comando lista los archivos y directorios?", "a": ["cd", "ls", "cat", "rmdir", "BIOS/UEFI", "Memoria RAM"], "k": 1}, {"c": "Terminal y comandos", "q": "¿Qué muestra el comando `ls -l` en Linux?", "a": ["Solo el nombre del equipo", "La dirección IP", "Un listado detallado de archivos y permisos", "El contenido de Internet", "BIOS/UEFI", "Memoria RAM"], "k": 2}, {"c": "Terminal y comandos", "q": "¿Qué comando permite retroceder al directorio padre?", "a": ["ls -l", "mkdir", "touch", "cd ..", "BIOS/UEFI", "Memoria RAM"], "k": 3}, {"c": "Terminal y comandos", "q": "¿Qué comando permite cambiar al directorio llamado documentos?", "a": ["cd documentos", "mkdir documentos", "cat documentos", "rmdir documentos", "BIOS/UEFI", "Memoria RAM"], "k": 0}, {"c": "Terminal y comandos", "q": "¿Qué comando crea una carpeta llamada proyectos?", "a": ["touch proyectos", "mkdir proyectos", "nano proyectos", "cd proyectos", "BIOS/UEFI", "Memoria RAM"], "k": 1}, {"c": "Terminal y comandos", "q": "¿Qué comando elimina un directorio vacío en Linux?", "a": ["cat", "touch", "rmdir", "ls", "BIOS/UEFI", "Memoria RAM"], "k": 2}, {"c": "Terminal y comandos", "q": "¿Qué comando elimina un directorio y su contenido de forma recursiva en Linux?", "a": ["mkdir -r", "cd -r", "ls -r", "rm -r", "BIOS/UEFI", "Memoria RAM"], "k": 3}, {"c": "Terminal y comandos", "q": "¿Qué comando crea un archivo vacío llamado notas.txt en Linux?", "a": ["touch notas.txt", "cat notas.txt", "rmdir notas.txt", "cd notas.txt", "BIOS/UEFI", "Memoria RAM"], "k": 0}, {"c": "Terminal y comandos", "q": "¿Qué comando permite editar un archivo de texto desde la terminal usando el editor Nano?", "a": ["ls notas.txt", "nano notas.txt", "mkdir notas.txt", "ipconfig notas.txt", "BIOS/UEFI", "Memoria RAM"], "k": 1}, {"c": "Terminal y comandos", "q": "¿Qué comando muestra en la terminal el contenido de un archivo?", "a": ["touch", "mkdir", "cat", "cd", "BIOS/UEFI", "Memoria RAM"], "k": 2}, {"c": "Terminal y comandos", "q": "Si ejecutas `cd ..`, ¿qué ocurre?", "a": ["Se crea una carpeta", "Se elimina un archivo", "Se muestra la dirección MAC", "Se cambia al directorio padre", "BIOS/UEFI", "Memoria RAM"], "k": 3}, {"c": "Redes y conectividad", "q": "¿Qué comando de Windows permite consultar la configuración IP del equipo?", "a": ["ipconfig", "mkdir", "rmdir", "nano", "Editor Nano", "Placa madre"], "k": 0}, {"c": "Redes y conectividad", "q": "¿Qué identifica una dirección IP dentro de una red?", "a": ["El modelo del teclado", "La dirección lógica de un dispositivo en la red", "La capacidad del disco", "El nombre del procesador", "Editor Nano", "Placa madre"], "k": 1}, {"c": "Redes y conectividad", "q": "¿Qué es una dirección MAC?", "a": ["Una contraseña de Windows", "Una dirección de una página web", "Un identificador físico de la interfaz de red", "El nombre del sistema operativo", "Editor Nano", "Placa madre"], "k": 2}, {"c": "Redes y conectividad", "q": "¿Qué comando permite comprobar si existe conectividad con otro equipo o destino?", "a": ["touch", "dir", "mkdir", "ping", "Editor Nano", "Placa madre"], "k": 3}, {"c": "Redes y conectividad", "q": "¿Qué protocolo utiliza normalmente el comando ping para comprobar conectividad?", "a": ["ICMP", "FTP", "HTTP", "SMTP", "Editor Nano", "Placa madre"], "k": 0}, {"c": "Redes y conectividad", "q": "Si ejecutas `ping 8.8.8.8`, ¿qué estás intentando comprobar?", "a": ["Crear una carpeta en Google", "La conectividad IP hacia esa dirección", "Cambiar tu dirección MAC", "Instalar un sistema operativo", "Editor Nano", "Placa madre"], "k": 1}, {"c": "Redes y conectividad", "q": "¿Qué permite comprobar `ping www.google.com` además de la conectividad?", "a": ["El espacio libre del disco", "La memoria RAM disponible", "Que el nombre de dominio pueda resolverse a una dirección IP", "La versión de Windows", "Editor Nano", "Placa madre"], "k": 2}, {"c": "Redes y conectividad", "q": "Si puedes hacer ping a una IP pública, pero no a un nombre de dominio, ¿qué servicio podría estar fallando?", "a": ["Teclado", "Memoria RAM", "Sistema de archivos", "DNS", "Editor Nano", "Placa madre"], "k": 3}];
+
+let preguntasMezcladas=[], indexActual=0, timeLeft=50, timerId=null;
+let respuestaSeleccionada=null, respuestasCorrectas=0, respondida=false, audioCtx=null;
+let incidencias=0, salidasPagina=0, examenIniciado=false, ultimaAdvertencia="";
+let pantallaCompletaActiva=false;
+let salidasVentana=0, salidaYaContada=false, pruebaAnulada=false;
+let avanceAutomaticoId=null, cuentaRegresivaId=null;
+let revelacionActiva=false, segundosRevelacion=3, mensajeRevelacion="";
+
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playTick(suspense=false) {
+  if (!audioCtx) return;
+  const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.type=suspense?'square':'sine';
+  osc.frequency.setValueAtTime(suspense?300:800,audioCtx.currentTime);
+  gain.gain.setValueAtTime(suspense?.15:.05,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.1);
+  osc.start(); osc.stop(audioCtx.currentTime+.1);
+}
+function playReveal() {
+  if (!audioCtx) return;
+  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  osc.connect(gain);gain.connect(audioCtx.destination);
+  osc.type='triangle';osc.frequency.setValueAtTime(400,audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(800,audioCtx.currentTime+.5);
+  gain.gain.setValueAtTime(.2,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+1);
+  osc.start();osc.stop(audioCtx.currentTime+1);
+}
+function mezclar(arr) {
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function escaparHTML(t) {
+  return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function registrarIncidencia(mensaje) {
+  incidencias++;
+  document.getElementById('incident-count').textContent=incidencias;
+  const warning=document.getElementById('integrity-warning');
+  warning.textContent=`Aviso ${incidencias}: ${mensaje}`;
+  warning.classList.remove('d-none');
+  ultimaAdvertencia=mensaje;
+}
+async function activarPantallaCompleta() {
+  if (document.fullscreenElement) return true;
+  try {
+    const target=document.documentElement;
+    if (target.requestFullscreen) {
+      await target.requestFullscreen();
+      pantallaCompletaActiva=!!document.fullscreenElement;
+      return true;
+    }
+    registrarIncidencia('Este navegador no permite activar pantalla completa.');
+    return false;
+  } catch (e) {
+    registrarIncidencia('No se pudo activar pantalla completa. Usa el botón de pantalla completa del navegador.');
+    return false;
+  }
+}
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('copy',e=>e.preventDefault());
+document.addEventListener('cut',e=>e.preventDefault());
+document.addEventListener('paste',e=>e.preventDefault());
+document.addEventListener('selectstart',e=>e.preventDefault());
+document.addEventListener('dragstart',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+  const campoNombre=document.getElementById('student-name');
+  const estaEscribiendoNombre=
+    !examenIniciado &&
+    campoNombre &&
+    e.target===campoNombre &&
+    !document.getElementById('welcome-screen').classList.contains('d-none');
+
+  // El teclado solo se permite en el campo de nombre antes de iniciar.
+  // Durante la evaluación, toda interacción se realiza con el mouse.
+  if(estaEscribiendoNombre) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+function contarSalidaVentana(origen) {
+  if(!examenIniciado || pruebaAnulada ||
+     document.getElementById('game-screen').classList.contains('d-none')) return;
+  if(salidaYaContada) return; // Evita contar dos veces el mismo cambio de ventana.
+  salidaYaContada=true;
+  salidasVentana++;
+  salidasPagina=salidasVentana;
+  document.getElementById('page-exit-count').textContent=salidasVentana;
+  registrarIncidencia(`Salida de ventana/pantalla completa (${salidasVentana} de 3).`);
+  if(salidasVentana>=3) {
+    anularPrueba();
+    return;
+  }
+  const aviso=document.getElementById('fullscreen-return');
+  document.getElementById('fullscreen-return-message').textContent=
+    `Has salido de la ventana de evaluación (${salidasVentana} de 3). Debes volver a pantalla completa para continuar.`;
+  aviso.classList.remove('d-none');
+  clearInterval(timerId); timerId=null;
+}
+
+async function volverAPantallaCompleta() {
+  try {
+    await document.documentElement.requestFullscreen();
+    pantallaCompletaActiva=!!document.fullscreenElement;
+    if(pantallaCompletaActiva) {
+      document.getElementById('fullscreen-return').classList.add('d-none');
+      salidaYaContada=false;
+      // Reanudar exactamente la fase y el tiempo que quedaron pendientes.
+      reanudarRelojesEvaluacion();
+    }
+  } catch(e) {
+    document.getElementById('fullscreen-return-message').textContent=
+      'El navegador no permitió volver automáticamente. Pulsa nuevamente el botón o usa el control de pantalla completa del navegador.';
+  }
+}
+
+function anularPrueba() {
+  pruebaAnulada=true;
+  clearInterval(timerId); timerId=null;
+  clearTimeout(avanceAutomaticoId); clearInterval(cuentaRegresivaId);
+  document.getElementById('fullscreen-return').classList.add('d-none');
+  document.getElementById('game-screen').classList.add('d-none');
+  document.getElementById('final-screen').classList.add('d-none');
+  document.getElementById('void-student-name').textContent=nombreEstudiante;
+  document.getElementById('void-exit-count').textContent=salidasVentana;
+  document.getElementById('void-screen').classList.remove('d-none');
+}
+
+document.addEventListener('fullscreenchange',()=>{
+  if(document.fullscreenElement) {
+    pantallaCompletaActiva=true;
+    return;
+  }
+  if(pantallaCompletaActiva && examenIniciado &&
+     !document.getElementById('game-screen').classList.contains('d-none')) {
+    pantallaCompletaActiva=false;
+    contarSalidaVentana('pantalla completa');
+  }
+});
+function registrarSalidaPagina() {
+  if(examenIniciado && document.visibilityState==='hidden') {
+    contarSalidaVentana('pestaña o ventana');
+  } else if(document.visibilityState==='visible') {
+    if(document.fullscreenElement) salidaYaContada=false;
+  }
+}
+document.addEventListener('visibilitychange',registrarSalidaPagina);
+window.addEventListener('beforeunload',e=>{
+  const evaluacionActiva=examenIniciado &&
+    !document.getElementById('game-screen').classList.contains('d-none') &&
+    !pruebaAnulada;
+  if(evaluacionActiva) {
+    e.preventDefault();
+    e.returnValue='';
+  }
+});
+
+function iniciarJuego() {
+  clearInterval(timerId);timerId=null;
+  clearTimeout(avanceAutomaticoId);clearInterval(cuentaRegresivaId);
+  avanceAutomaticoId=null;cuentaRegresivaId=null;
+  revelacionActiva=false;segundosRevelacion=3;mensajeRevelacion="";
+  window.resultadoEvaluacionActual=null;
+  incidencias=0;salidasPagina=0;examenIniciado=false;ultimaAdvertencia="";
+  pantallaCompletaActiva=false;
+  salidasVentana=0; salidaYaContada=false; pruebaAnulada=false;
+  document.getElementById('void-screen').classList.add('d-none');
+  document.getElementById('fullscreen-return').classList.add('d-none');
+  nombreEstudiante="";
+  document.getElementById('incident-count').textContent='0';
+  document.getElementById('page-exit-count').textContent='0';
+  document.getElementById('integrity-warning').classList.add('d-none');
+  preguntasMezcladas=mezclar(bancoPreguntas).map(q=>({...q,opts:mezclar(q.a.map((t,i)=>({t,c:i===q.k})))}));
+  indexActual=0;respuestasCorrectas=0;
+  document.getElementById('student-name').value='';
+  document.getElementById('name-error').classList.add('d-none');
+  document.getElementById('final-screen').classList.add('d-none');
+  document.getElementById('game-screen').classList.add('d-none');
+  document.getElementById('welcome-screen').classList.remove('d-none');
+} 
+
+async function comenzarEvaluacion() {
+  const campo=document.getElementById('student-name');
+  nombreEstudiante=campo.value.trim();
+  if(!nombreEstudiante) {
+    document.getElementById('name-error').classList.remove('d-none');
+    campo.focus();
+    return;
+  }
+  document.getElementById('name-error').classList.add('d-none');
+  document.getElementById('student-name-display').textContent=nombreEstudiante;
+  document.getElementById('final-student-name').textContent=nombreEstudiante;
+  document.getElementById('welcome-screen').classList.add('d-none');
+  document.getElementById('game-screen').classList.remove('d-none');
+  cargarPregunta();
+  await iniciarTemporizador();
+}
+function cargarPregunta() {
+  clearInterval(timerId);timerId=null;
+  clearTimeout(avanceAutomaticoId);clearInterval(cuentaRegresivaId);
+  avanceAutomaticoId=null;cuentaRegresivaId=null;
+  respuestaSeleccionada=null;respondida=false;
+  const data=preguntasMezcladas[indexActual];
+  document.getElementById('question-counter').textContent=`Pregunta ${indexActual+1} de ${preguntasMezcladas.length}`;
+  document.getElementById('progress-bar').style.width=`${(indexActual/40)*100}%`;
+  document.getElementById('question-text').textContent=data.q;
+  const grid=document.getElementById('options-grid');grid.innerHTML='';
+  data.opts.forEach((opt,i)=>{
+    const col=document.createElement('div');col.className='col-md-4 col-6';
+    const btn=document.createElement('button');
+    btn.className='btn btn-outline-light w-100 fw-bold btn-opcion';
+    btn.id=`opt-${i}`;btn.disabled=true;btn.dataset.correct=String(opt.c);
+    btn.innerHTML=`<span class="badge bg-light text-dark me-2 fs-5">${i+1}</span> ${escaparHTML(opt.t)}`;
+    btn.addEventListener('click',()=>seleccionarRespuesta(i));
+    col.appendChild(btn);grid.appendChild(col);
+  });
+  document.getElementById('options-container').classList.add('d-none');
+  document.getElementById('result-message').classList.add('d-none');
+  const indicador=document.getElementById('fase-indicador');
+  indicador.textContent='Fase de lectura (7 segundos)';indicador.className='text-info fw-bold mb-1 fs-5 fade-in';
+  timeLeft=27;actualizarReloj();
+  document.getElementById('timer').className='display-1 fw-bold text-white mb-4';
+}
+function actualizarReloj() {
+  document.getElementById('timer').textContent=`00:${String(timeLeft).padStart(2,'0')}`;
+}
+async function iniciarTemporizador() {
+  initAudio();
+  if(!examenIniciado) examenIniciado=true;
+  await activarPantallaCompleta();
+  timerId=setInterval(()=>{
+    timeLeft--;actualizarReloj();
+    if(timeLeft>20) playTick(false);
+    if(timeLeft===20){
+      document.getElementById('options-container').classList.remove('d-none');
+      const ind=document.getElementById('fase-indicador');
+      ind.textContent='¡A MARCAR! Tienes 20 segundos';
+      ind.className='text-warning fw-bold mb-1 fs-5 fade-in';
+      document.querySelectorAll('.btn-opcion').forEach(b=>b.disabled=false);
+    }
+    if(timeLeft<=20 && timeLeft>10) playTick(false);
+    if(timeLeft===10){
+      document.getElementById('timer').className='display-1 fw-bold text-danger mb-4';
+      const ind=document.getElementById('fase-indicador');
+      ind.textContent='¡ÚLTIMOS 10 SEGUNDOS!';
+      ind.className='text-danger fw-bold mb-1 fs-5 fade-in';
+    }
+    if(timeLeft<=10 && timeLeft>0) playTick(true);
+    if(timeLeft<=0){clearInterval(timerId);timerId=null;revelar();}
+  },1000);
+}
+function seleccionarRespuesta(i) {
+  if(respondida || timeLeft>30 || timeLeft<=0)return;
+  respuestaSeleccionada=i;
+  document.querySelectorAll('.btn-opcion').forEach((b,j)=>{
+    b.classList.toggle('selected-answer',j===i);
+  });
+}
+function programarAvanceRevelacion() {
+  if(!revelacionActiva || pruebaAnulada) return;
+  clearInterval(cuentaRegresivaId);
+  clearTimeout(avanceAutomaticoId);
+  document.getElementById('result-message').textContent=
+    `${mensajeRevelacion} Siguiente pregunta en ${segundosRevelacion}...`;
+  cuentaRegresivaId=setInterval(()=>{
+    segundosRevelacion--;
+    if(segundosRevelacion>0) {
+      document.getElementById('result-message').textContent=
+        `${mensajeRevelacion} Siguiente pregunta en ${segundosRevelacion}...`;
+    }
+  },1000);
+  avanceAutomaticoId=setTimeout(()=>{
+    clearInterval(cuentaRegresivaId);
+    cuentaRegresivaId=null;avanceAutomaticoId=null;
+    revelacionActiva=false;
+    avanzarUnaPregunta();
+  },segundosRevelacion*1000);
+}
+
+function pausarRelojesEvaluacion() {
+  clearInterval(timerId);timerId=null;
+  if(revelacionActiva) {
+    // El contador de revelación solo descuenta segundos completos.
+    clearInterval(cuentaRegresivaId);cuentaRegresivaId=null;
+    clearTimeout(avanceAutomaticoId);avanceAutomaticoId=null;
+  }
+}
+
+function reanudarRelojesEvaluacion() {
+  if(pruebaAnulada) return;
+  if(revelacionActiva) {
+    programarAvanceRevelacion();
+  } else if(!respondida) {
+    iniciarTemporizador();
+  }
+}
+
+function revelar() {
+  if(respondida || pruebaAnulada)return;
+  respondida=true;playReveal();
+  const data=preguntasMezcladas[indexActual];
+  const botones=[...document.querySelectorAll('.btn-opcion')];
+  const elegido=respuestaSeleccionada===null?null:data.opts[respuestaSeleccionada];
+  if(elegido && elegido.c) respuestasCorrectas++;
+  botones.forEach((btn,i)=>{
+    btn.disabled=true;
+    if(btn.dataset.correct==='true')btn.classList.add('correct-answer','pulse-effect');
+    else if(i===respuestaSeleccionada)btn.classList.add('wrong-answer');
+  });
+  document.getElementById('result-message').classList.remove('d-none');
+  mensajeRevelacion=elegido===null?'Tiempo agotado. No seleccionaste una respuesta.':
+    elegido.c?'¡Correcto! ¡Muy bien!':'Respuesta incorrecta. Revisa la alternativa resaltada en verde.';
+  document.getElementById('fase-indicador').textContent='Respuesta revelada';
+  document.getElementById('progress-bar').style.width=`${((indexActual+1)/40)*100}%`;
+  if(typeof confetti==='function')confetti({particleCount:130,spread:75,origin:{y:.65},zIndex:1050});
+  revelacionActiva=true;
+  segundosRevelacion=3;
+  programarAvanceRevelacion();
+}
+function avanzarUnaPregunta() {
+  if(indexActual<39) {
+    indexActual++;
+    cargarPregunta();
+    // Iniciar automáticamente el temporizador de la nueva pregunta.
+    iniciarTemporizador();
+  } else {
+    mostrarResultado();
+  }
+}
+function mostrarResultado() {
+  clearInterval(timerId);
+  document.getElementById('game-screen').classList.add('d-none');
+  document.getElementById('final-screen').classList.remove('d-none');
+  const incorrectas=40-respuestasCorrectas;
+  const nota=(respuestasCorrectas/40)*20;
+  document.getElementById('final-grade').textContent=nota.toFixed(1);
+  document.getElementById('correct-total').textContent=respuestasCorrectas;
+  document.getElementById('wrong-total').textContent=incorrectas;
+  document.getElementById('percent-total').textContent=Math.round(respuestasCorrectas/40*100)+'%';
+  document.getElementById('final-incidents').textContent=incidencias;
+  document.getElementById('final-page-exits').textContent=salidasPagina;
+  const resultado={
+    fecha:new Date().toLocaleString('es-PE'),
+    estudiante:nombreEstudiante,
+    nota:nota.toFixed(1),
+    correctas:respuestasCorrectas,
+    incorrectas:incorrectas,
+    porcentaje:Math.round(respuestasCorrectas/40*100),
+    incidencias,
+    salidas:salidasVentana,
+    estado:'Completada'
+  };
+  window.resultadoEvaluacionActual=resultado;
+  try {
+    const historial=JSON.parse(localStorage.getItem('kahoot_sistemas_resultados')||'[]');
+    historial.push(resultado);
+    localStorage.setItem('kahoot_sistemas_resultados',JSON.stringify(historial));
+  } catch(error) {
+    console.warn('No se pudo guardar el historial local:',error);
+  }
+  let msg=nota>=18?'¡Excelente trabajo!':nota>=14?'¡Buen desempeño!':nota>=11?'Vas avanzando, sigue practicando.':'Es momento de reforzar los temas y volver a intentarlo.';
+  document.getElementById('grade-message').textContent=msg;
+  if(typeof confetti==='function' && nota>=14)confetti({particleCount:220,spread:100,origin:{y:.6},zIndex:1050});
+}
+
+function descargarResultadoCSV() {
+  const r=window.resultadoEvaluacionActual;
+  if(!r) return;
+  const columnas=['Fecha','Estudiante','Nota','Correctas','Incorrectas','Porcentaje','Incidencias','Salidas','Estado'];
+  const valores=[r.fecha,r.estudiante,r.nota,r.correctas,r.incorrectas,`${r.porcentaje}%`,r.incidencias,r.salidas,r.estado];
+  const escapar=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const csv='\\uFEFF'+columnas.map(escapar).join(';')+'\\r\\n'+valores.map(escapar).join(';');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`resultado_${String(r.estudiante).trim().replace(/[^a-z0-9_-]+/gi,'_')}.csv`;
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('begin-exam-btn').addEventListener('click', () => {
+  comenzarEvaluacion().catch(error => {
+    console.error('No se pudo iniciar la evaluación:', error);
+    document.getElementById('name-error').textContent = 'No se pudo iniciar. Verifica que el navegador permita ejecutar JavaScript.';
+    document.getElementById('name-error').classList.remove('d-none');
+  });
+});
+document.getElementById('student-name').addEventListener('keydown', event => {
+  if (event.key === 'Enter') document.getElementById('begin-exam-btn').click();
+});
+document.getElementById('fullscreen-return-btn').addEventListener('click',volverAPantallaCompleta);
+document.getElementById('void-restart-btn').addEventListener('click',iniciarJuego);
+document.getElementById('export-result-btn').addEventListener('click',descargarResultadoCSV);
+document.getElementById('restart-btn').addEventListener('click',iniciarJuego);
+iniciarJuego();
+</script>
+</body>
+</html>
