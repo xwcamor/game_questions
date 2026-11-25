@@ -15,9 +15,12 @@ El instalador está corregido para Windows: utiliza `CALL` al ejecutar Composer 
 
 ## Después de instalar
 
-1. Crea la base de datos MySQL `playlab`.
-2. Configura `DB_CONNECTION=mysql`, `DB_DATABASE=playlab`, `DB_USERNAME` y `DB_PASSWORD` en `.env`.
-3. Ejecuta `php artisan migrate --seed`.
-4. Ejecuta `php artisan serve`.
+El propio instalador configura MySQL, crea la base de datos `playlab` si no existe y ejecuta las migraciones y los datos iniciales. En Laragon utiliza por defecto `root` sin contraseña. Si tu MySQL usa otra contraseña, ajusta `DB_PASSWORD` en `.env` y vuelve a ejecutar `INSTALAR.bat`.
+
+Al finalizar, solo ejecuta:
+
+```bat
+php artisan serve
+```
 
 Consulta `README.md` para las cuentas iniciales, pruebas y configuración completa.
