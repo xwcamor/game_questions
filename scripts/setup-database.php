@@ -53,7 +53,24 @@ function writeEnvValue(string &$contents, string $key, string $value): void
 $connection = strtolower(readEnvValue($envContents, 'DB_CONNECTION', 'sqlite'));
 
 if ($connection === 'sqlite' || $connection === '') {
-    // La instalacion anterior de Laravel dejaba SQLite por defecto.
+    // Guardar la ruta de la SQLite anterior para importar sus usuarios y cuestionarios
+    // a MySQL despues de crear las tablas nuevas.
+    $sqliteDatabase = readEnvValue($envContents, 'DB_DATABASE', 'database/database.sqlite');
+    $sqlitePath = $sqliteDatabase;
+
+    if ($sqlitePath !== '' && !preg_match('/^(?:[A-Za-z]:[\\\\\/]|\\\\\\\\|\/)/', $sqlitePath)) {
+        $sqlitePath = $projectRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\\\'], DIRECTORY_SEPARATOR, $sqlitePath);
+    }
+
+    if ($sqlitePath !== '' && is_file($sqlitePath)) {
+        $markerDirectory = $projectRoot . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'app';
+        if (!is_dir($markerDirectory)) {
+            mkdir($markerDirectory, 0775, true);
+        }
+        file_put_contents($markerDirectory . DIRECTORY_SEPARATOR . 'playlab-sqlite-import-source.txt', realpath($sqlitePath) ?: $sqlitePath, LOCK_EX);
+        echo "Se encontro una base SQLite anterior. Se conservara y sus datos se importaran a MySQL.\\n";
+    }
+
     // Convertimos ese .env al perfil MySQL de Laragon.
     writeEnvValue($envContents, 'DB_CONNECTION', 'mysql');
     writeEnvValue($envContents, 'DB_HOST', '127.0.0.1');
@@ -61,7 +78,7 @@ if ($connection === 'sqlite' || $connection === '') {
     writeEnvValue($envContents, 'DB_DATABASE', 'playlab');
     writeEnvValue($envContents, 'DB_USERNAME', 'root');
     writeEnvValue($envContents, 'DB_PASSWORD', '');
-    writeEnvValue($envContents, 'DB_URL', '');
+    writeEnvValue($envContents, 'DB_URL', 'null');
     echo "Se detecto la configuracion SQLite anterior. El archivo .env se cambio a MySQL (Laragon).\n";
 }
 
