@@ -76,11 +76,11 @@ PlayLab utiliza **MySQL como base principal**. El archivo `.env.example` ya cont
 - Usuario predeterminado: `root`
 - Contraseña predeterminada: vacía (configuración habitual de Laragon)
 
-No tienes que crear la base manualmente. `INSTALAR.bat` ejecuta `scripts/setup-database.php`, que conecta con MySQL y crea `playlab` mediante `CREATE DATABASE IF NOT EXISTS`. Después ejecuta automáticamente `php artisan migrate --seed --force`, que crea las tablas y carga el administrador y el cuestionario de demostración.
+No tienes que crear la base manualmente. `INSTALAR.bat` ejecuta `scripts/setup-database.php`, que conecta con MySQL y crea `playlab` mediante `CREATE DATABASE IF NOT EXISTS`. Después crea las tablas, importa los usuarios y cuestionarios de la SQLite anterior cuando detecta ese archivo, y carga el administrador y el cuestionario de demostración. El archivo SQLite original se conserva como respaldo.
 
 Si tu instalación de MySQL tiene una contraseña distinta, coloca ese valor en `DB_PASSWORD` dentro de `.env` y vuelve a ejecutar `INSTALAR.bat`. No publiques el archivo `.env`.
 
-El instalador también reconoce el `.env` antiguo que Laravel creó con SQLite y lo convierte al perfil MySQL predeterminado de Laragon.
+El instalador también reconoce el `.env` antiguo que Laravel creó con SQLite y lo convierte al perfil MySQL predeterminado de Laragon. Si encuentra `database/database.sqlite`, importa sus datos de aplicación a MySQL sin borrar el archivo original.
 
 Abre `http://127.0.0.1:8000`.
 
