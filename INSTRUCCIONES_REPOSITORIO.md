@@ -15,7 +15,7 @@ El instalador está corregido para Windows: utiliza `CALL` al ejecutar Composer 
 
 ## Después de instalar
 
-El propio instalador configura MySQL, crea la base de datos `playlab` si no existe y ejecuta las migraciones y los datos iniciales. En Laragon utiliza por defecto `root` sin contraseña. Si tu MySQL usa otra contraseña, ajusta `DB_PASSWORD` en `.env` y vuelve a ejecutar `INSTALAR.bat`.
+El propio instalador configura MySQL, crea la base de datos `playlab` si no existe, ejecuta las migraciones, importa los datos de la SQLite anterior si existe y carga los datos iniciales. El archivo SQLite original se conserva. En Laragon utiliza por defecto `root` sin contraseña. Si tu MySQL usa otra contraseña, ajusta `DB_PASSWORD` en `.env` y vuelve a ejecutar `INSTALAR.bat`.
 
 Al finalizar, solo ejecuta:
 
