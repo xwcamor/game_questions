@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title','Crear cuenta | PlayLab')
+@section('content')
+<div class="auth-wrap"><form class="form-card auth-card" method="POST" action="{{ url('/registro') }}">@csrf<span class="eyebrow">EMPIEZA A JUGAR</span><h1>Crea tu cuenta</h1><p class="muted">Regístrate como anfitrión y crea tus propios cuestionarios.</p><label>Nombre completo<input name="name" maxlength="120" value="{{ old('name') }}" required autocomplete="name"></label><label>Correo electrónico<input type="email" name="email" value="{{ old('email') }}" required autocomplete="email"></label><label>Contraseña<input type="password" name="password" required minlength="10" autocomplete="new-password"></label><label>Confirmar contraseña<input type="password" name="password_confirmation" required minlength="10" autocomplete="new-password"></label><button class="btn btn-primary btn-block btn-lg">Crear mi cuenta →</button><p class="muted center">¿Ya tienes cuenta? <a class="text-link" href="{{ route('login') }}">Ingresar</a></p></form></div>
+@endsection
