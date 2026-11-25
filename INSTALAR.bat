@@ -44,7 +44,7 @@ goto merge_temp_project
 
 :create_temp_project
 set "TEMP_PROJECT=%TEMP%\playlab-laravel13-%RANDOM%-%RANDOM%"
-echo [1/5] Descargando una base limpia de Laravel 13...
+echo [1/7] Descargando una base limpia de Laravel 13...
 REM IMPORTANTE: Composer suele ser composer.bat en Windows.
 REM CALL permite que este instalador continue cuando Composer termine.
 call composer create-project "laravel/laravel:^13.0" "%TEMP_PROJECT%" --no-interaction
@@ -57,7 +57,7 @@ if not exist "%TEMP_PROJECT%\artisan" (
 )
 
 echo.
-echo [2/5] Copiando los archivos base a la carpeta principal...
+echo [2/7] Copiando los archivos base a la carpeta principal...
 echo Se conservaran todos los archivos existentes de PlayLab y Git.
 REM /XC /XN /XO evita reemplazar archivos que ya existan en el repositorio.
 REM Solo se copian archivos que aun no existen en el destino.
@@ -83,7 +83,7 @@ if not exist "%ROOT%package.json" (
 cd /d "%ROOT%"
 
 echo.
-echo [3/5] Preparando el archivo .env...
+echo [3/7] Preparando el archivo .env...
 if not exist "%ROOT%.env" (
   if exist "%ROOT%.env.example" (
     copy /Y "%ROOT%.env.example" "%ROOT%.env" >nul
@@ -94,7 +94,7 @@ if not exist "%ROOT%.env" (
 )
 
 echo.
-echo [4/5] Instalando dependencias PHP...
+echo [4/7] Instalando dependencias PHP...
 call composer install --no-interaction --prefer-dist
 if errorlevel 1 goto error
 
@@ -118,8 +118,18 @@ php artisan config:clear
 if errorlevel 1 goto error
 
 echo.
-echo [6/7] Ejecutando migraciones y cargando datos iniciales...
-php artisan migrate --seed --force
+echo [6/7] Creando las tablas de MySQL...
+php artisan migrate --force
+if errorlevel 1 goto error
+
+echo.
+echo Importando datos de la SQLite anterior, si existe...
+php scripts\import-sqlite.php
+if errorlevel 1 goto error
+
+echo.
+echo Cargando administrador y cuestionario de demostracion...
+php artisan db:seed --force
 if errorlevel 1 goto error
 
 echo.
