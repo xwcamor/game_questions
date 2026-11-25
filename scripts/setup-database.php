@@ -59,7 +59,7 @@ if ($connection === 'sqlite' || $connection === '') {
     $sqlitePath = $sqliteDatabase;
 
     if ($sqlitePath !== '' && !preg_match('/^(?:[A-Za-z]:[\\\\\/]|\\\\\\\\|\/)/', $sqlitePath)) {
-        $sqlitePath = $projectRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\\\'], DIRECTORY_SEPARATOR, $sqlitePath);
+        $sqlitePath = $projectRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $sqlitePath);
     }
 
     if ($sqlitePath !== '' && is_file($sqlitePath)) {
