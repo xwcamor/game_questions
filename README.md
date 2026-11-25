@@ -66,36 +66,21 @@ El instalador crea una base limpia de Laravel 13 en una carpeta temporal y combi
 
 Si prefieres hacerlo manualmente, crea una instalación limpia de Laravel 13 en una carpeta temporal y combina sus archivos de framework con este repositorio. No reemplaces los archivos personalizados indicados arriba.
 
-## Base de datos y configuración
+## Base de datos MySQL automática
 
-Crea en MySQL una base de datos llamada `playlab`. Revisa el archivo `.env` que Laravel genere en la raíz y ajusta:
+PlayLab utiliza **MySQL como base principal**. El archivo `.env.example` ya contiene la configuración de MySQL para Laragon:
 
-```dotenv
-APP_NAME="PlayLab"
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://127.0.0.1:8000
-APP_LOCALE=es
-APP_TIMEZONE=America/Lima
+- Host: `127.0.0.1`
+- Puerto: `3306`
+- Base de datos: `playlab`
+- Usuario predeterminado: `root`
+- Contraseña predeterminada: vacía (configuración habitual de Laragon)
 
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=playlab
-DB_USERNAME=root
-DB_PASSWORD=
-```
+No tienes que crear la base manualmente. `INSTALAR.bat` ejecuta `scripts/setup-database.php`, que conecta con MySQL y crea `playlab` mediante `CREATE DATABASE IF NOT EXISTS`. Después ejecuta automáticamente `php artisan migrate --seed --force`, que crea las tablas y carga el administrador y el cuestionario de demostración.
 
-Usa las credenciales reales de MySQL. No publiques el archivo `.env`.
+Si tu instalación de MySQL tiene una contraseña distinta, coloca ese valor en `DB_PASSWORD` dentro de `.env` y vuelve a ejecutar `INSTALAR.bat`. No publiques el archivo `.env`.
 
-Cuando el instalador termine, crea la base MySQL `playlab`, ajusta las credenciales de `.env` y ejecuta:
-
-```bat
-php artisan migrate --seed
-php artisan serve
-```
-
-Composer y los recursos de Vite ya quedan preparados por `INSTALAR.bat`.
+El instalador también reconoce el `.env` antiguo que Laravel creó con SQLite y lo convierte al perfil MySQL predeterminado de Laragon.
 
 Abre `http://127.0.0.1:8000`.
 
