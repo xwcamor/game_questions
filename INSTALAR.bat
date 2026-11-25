@@ -32,13 +32,27 @@ if errorlevel 1 (
   exit /b 1
 )
 
+REM Reutilizar el Laravel temporal creado por una instalacion interrumpida.
+for /d %%D in ("%TEMP%\playlab-laravel13-*") do (
+  if exist "%%~fD\artisan" set "TEMP_PROJECT=%%~fD"
+)
+
+if not defined TEMP_PROJECT goto create_temp_project
+echo Se encontro una descarga temporal anterior:
+echo %TEMP_PROJECT%
+goto merge_temp_project
+
+:create_temp_project
+set "TEMP_PROJECT=%TEMP%\playlab-laravel13-%RANDOM%-%RANDOM%"
 echo [1/5] Descargando una base limpia de Laravel 13...
 REM IMPORTANTE: Composer suele ser composer.bat en Windows.
 REM CALL permite que este instalador continue cuando Composer termine.
 call composer create-project "laravel/laravel:^13.0" "%TEMP_PROJECT%" --no-interaction
 if errorlevel 1 goto error
+
+:merge_temp_project
 if not exist "%TEMP_PROJECT%\artisan" (
-  echo ERROR: Composer termino pero no creo el archivo artisan.
+  echo ERROR: No se encontro artisan dentro del proyecto temporal.
   goto error
 )
 
