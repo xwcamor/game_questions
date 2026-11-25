@@ -91,6 +91,16 @@ class RoomController
         $isHost=$this->isHost($room);
         $participant=$this->participantFor($room);
         abort_unless($isHost || $participant,403);
+
+        // Cierre automático al vencer el tiempo: el estado lo decide el servidor.
+        if ($room->status === 'running' && $room->question_phase === 'question' && $room->question_started_at) {
+            $activeQuestion = $this->currentQuestion($room);
+            $limit = $activeQuestion?->time_limit_seconds ?: $room->quiz->time_limit_seconds;
+            if ($activeQuestion && now()->greaterThanOrEqualTo($room->question_started_at->copy()->addSeconds($limit))) {
+                $room->update(['question_phase' => 'reveal', 'question_closed_at' => now()]);
+            }
+        }
+
         if($participant) $participant->forceFill(['last_seen_at'=>now()])->save();
         $room->load(['participants'=>fn($q)=>$q->orderByDesc('score')->orderBy('id')]);
         $data=[
@@ -106,8 +116,11 @@ class RoomController
             if($question){
                 $order=$room->option_orders[(string)$question->id] ?? $question->options->pluck('id')->all();
                 $options=QuestionOption::whereIn('id',$order)->get()->keyBy('id');
+                $data['my_answer'] = $participant
+                    ? GameAnswer::where('game_room_id',$room->id)->where('game_participant_id',$participant->id)->where('question_id',$question->id)->exists()
+                    : false;
                 $data['question']=[
-                    'text'=>$question->question_text,'category'=>$question->category,
+                    'text'=>$question->question_text,'category'=>$question->category,'type'=>$question->question_type,
                     'time_limit'=>$question->time_limit_seconds ?: $room->quiz->time_limit_seconds,
                     'options'=>collect($order)->map(fn($id)=>['id'=>$id,'text'=>$options[$id]->option_text ?? ''])->values(),
                 ];
@@ -115,9 +128,15 @@ class RoomController
         } elseif($room->question_phase==='reveal'){
             $question=$this->currentQuestion($room);
             if($question){
-                $data['question']=['text'=>$question->question_text,'category'=>$question->category,'explanation'=>$question->explanation,
+                $order=$room->option_orders[(string)$question->id] ?? $question->options->pluck('id')->all();
+                $options=QuestionOption::whereIn('id',$order)->get()->keyBy('id');
+                $data['question']=[
+                    'text'=>$question->question_text,'category'=>$question->category,'type'=>$question->question_type,
+                    'explanation'=>$question->explanation,
+                    'options'=>collect($order)->map(fn($id)=>['id'=>$id,'text'=>$options[$id]->option_text ?? ''])->values(),
                     'correct_option_ids'=>$question->options()->where('is_correct',true)->pluck('id'),
-                    'answer_summary'=>$this->answerSummary($room,$question)];
+                    'answer_summary'=>$this->answerSummary($room,$question)
+                ];
             }
         }
         $data['leaderboard']=$room->participants->take(10)->values()->map(fn($p,$i)=>['position'=>$i+1,'name'=>$p->display_name,'avatar'=>$p->avatar,'score'=>$p->score]);
