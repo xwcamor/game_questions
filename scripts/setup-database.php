@@ -71,13 +71,19 @@ if ($connection === 'sqlite' || $connection === '') {
         echo "Se encontro una base SQLite anterior. Se conservara y sus datos se importaran a MySQL.\\n";
     }
 
-    // Convertimos ese .env al perfil MySQL de Laragon.
+    // Convertimos SQLite a MySQL y conservamos host/usuario/clave si el usuario
+    // ya habia personalizado esas credenciales.
+    $mysqlHost = readEnvValue($envContents, 'DB_HOST', '127.0.0.1');
+    $mysqlPort = readEnvValue($envContents, 'DB_PORT', '3306');
+    $mysqlUser = readEnvValue($envContents, 'DB_USERNAME', 'root');
+    $mysqlPassword = readEnvValue($envContents, 'DB_PASSWORD', '');
+
     writeEnvValue($envContents, 'DB_CONNECTION', 'mysql');
-    writeEnvValue($envContents, 'DB_HOST', '127.0.0.1');
-    writeEnvValue($envContents, 'DB_PORT', '3306');
+    writeEnvValue($envContents, 'DB_HOST', $mysqlHost !== '' ? $mysqlHost : '127.0.0.1');
+    writeEnvValue($envContents, 'DB_PORT', $mysqlPort !== '' ? $mysqlPort : '3306');
     writeEnvValue($envContents, 'DB_DATABASE', 'playlab');
-    writeEnvValue($envContents, 'DB_USERNAME', 'root');
-    writeEnvValue($envContents, 'DB_PASSWORD', '');
+    writeEnvValue($envContents, 'DB_USERNAME', $mysqlUser !== '' ? $mysqlUser : 'root');
+    writeEnvValue($envContents, 'DB_PASSWORD', $mysqlPassword);
     writeEnvValue($envContents, 'DB_URL', 'null');
     echo "Se detecto la configuracion SQLite anterior. El archivo .env se cambio a MySQL (Laragon).\n";
 }
