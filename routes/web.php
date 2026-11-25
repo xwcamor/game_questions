@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn()=>view('home'))->name('home');
 Route::get('/salas-publicas',[RoomController::class,'index'])->name('rooms.index');
+Route::get('/salas', function (Request $request) {
+    $data = $request->validate(['code' => ['required', 'string', 'size:6']]);
+    return redirect()->route('rooms.show', strtoupper($data['code']));
+})->name('rooms.lookup');
 Route::post('/salas/unirse',[RoomController::class,'join'])->middleware('throttle:20,1')->name('rooms.join');
 Route::get('/salas/{code}',[RoomController::class,'show'])->where('code','[A-Za-z0-9]{6}')->name('rooms.show');
 Route::get('/salas/{code}/estado',[RoomController::class,'state'])->middleware('throttle:120,1')->name('rooms.state');
