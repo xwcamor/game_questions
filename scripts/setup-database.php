@@ -68,7 +68,7 @@ if ($connection === 'sqlite' || $connection === '') {
             mkdir($markerDirectory, 0775, true);
         }
         file_put_contents($markerDirectory . DIRECTORY_SEPARATOR . 'playlab-sqlite-import-source.txt', realpath($sqlitePath) ?: $sqlitePath, LOCK_EX);
-        echo "Se encontro una base SQLite anterior. Se conservara y sus datos se importaran a MySQL.\\n";
+        echo 'Se encontro una base SQLite anterior. Se conservara y sus datos se importaran a MySQL.' . PHP_EOL;
     }
 
     // Convertimos SQLite a MySQL y conservamos host/usuario/clave si el usuario
