@@ -3,7 +3,7 @@ setlocal EnableExtensions
 title PlayLab - Preparar Laravel 13 en la carpeta principal
 
 set "ROOT=%~dp0"
-set "TEMP_PROJECT=%TEMP%\playlab-laravel13-%RANDOM%-%RANDOM%"
+set "TEMP_PROJECT="
 
 echo.
 echo  ============================================
