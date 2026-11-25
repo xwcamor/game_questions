@@ -14,13 +14,8 @@ echo Este instalador prepara Laravel dentro de:
 echo %ROOT%
 echo.
 
-if exist "%ROOT%artisan" (
-  echo Ya se encontro artisan en esta carpeta.
-  echo No se sobrescribira una instalacion existente.
-  echo Ejecuta manualmente: composer install
-  pause
-  exit /b 0
-)
+REM Si artisan ya existe, el framework ya fue copiado. Continuar con la preparacion.
+if exist "%ROOT%artisan" goto finish_setup
 
 where composer >nul 2>nul
 if errorlevel 1 (
@@ -37,39 +32,101 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [1/4] Descargando una base limpia de Laravel 13...
-composer create-project "laravel/laravel:^13.0" "%TEMP_PROJECT%"
+echo [1/5] Descargando una base limpia de Laravel 13...
+REM IMPORTANTE: Composer suele ser composer.bat en Windows.
+REM CALL permite que este instalador continue cuando Composer termine.
+call composer create-project "laravel/laravel:^13.0" "%TEMP_PROJECT%" --no-interaction
 if errorlevel 1 goto error
-
-echo [2/4] Combinando Laravel con el codigo PlayLab de esta carpeta...
-robocopy "%TEMP_PROJECT%" "%ROOT%" /E /R:2 /W:1 /XF README.md app.css app.js web.php DatabaseSeeder.php /XD .git
-if errorlevel 8 goto error
-
-echo [3/4] Comprobando que artisan este disponible...
-if not exist "%ROOT%artisan" (
-  echo ERROR: No se encontro artisan en la carpeta principal.
+if not exist "%TEMP_PROJECT%\artisan" (
+  echo ERROR: Composer termino pero no creo el archivo artisan.
   goto error
 )
 
-echo [4/4] Preparacion del framework completada.
-if exist "%TEMP_PROJECT%" rmdir /S /Q "%TEMP_PROJECT%"
+echo.
+echo [2/5] Copiando los archivos base a la carpeta principal...
+echo Se conservaran todos los archivos existentes de PlayLab y Git.
+REM /XC /XN /XO evita reemplazar archivos que ya existan en el repositorio.
+REM Solo se copian archivos que aun no existen en el destino.
+REM No copiamos vendor, node_modules, .git ni el .env temporal.
+robocopy "%TEMP_PROJECT%" "%ROOT%" /E /COPY:DAT /DCOPY:DAT /R:2 /W:1 /XC /XN /XO /XD .git vendor node_modules /XF .env
+set "ROBOCOPY_CODE=%ERRORLEVEL%"
+if %ROBOCOPY_CODE% GEQ 8 goto error
+
+if not exist "%ROOT%artisan" (
+  echo ERROR: No se pudo copiar artisan a la carpeta principal.
+  goto error
+)
+if not exist "%ROOT%composer.json" (
+  echo ERROR: No se copio composer.json.
+  goto error
+)
+if not exist "%ROOT%package.json" (
+  echo ERROR: No se copio package.json.
+  goto error
+)
+
+:finish_setup
+cd /d "%ROOT%"
 
 echo.
-echo Laravel 13 y PlayLab quedaron combinados en la carpeta principal.
+echo [3/5] Preparando el archivo .env...
+if not exist "%ROOT%.env" (
+  if exist "%ROOT%.env.example" (
+    copy /Y "%ROOT%.env.example" "%ROOT%.env" >nul
+  ) else (
+    echo ERROR: No existe .env.example.
+    goto error
+  )
+)
+
+echo.
+echo [4/5] Instalando dependencias PHP...
+call composer install --no-interaction --prefer-dist
+if errorlevel 1 goto error
+
+echo.
+echo Generando la clave de aplicacion...
+php artisan key:generate --force
+if errorlevel 1 goto error
+
+echo.
+echo [5/5] Instalando y compilando recursos web...
+where npm >nul 2>nul
+if errorlevel 1 (
+  echo AVISO: npm no aparece en PATH. La instalacion PHP termino.
+  echo Instala Node.js LTS y luego ejecuta: npm install ^&^& npm run build
+  goto success
+)
+call npm install
+if errorlevel 1 goto error
+call npm run build
+if errorlevel 1 goto error
+
+:success
+if exist "%TEMP_PROJECT%" rmdir /S /Q "%TEMP_PROJECT%" >nul 2>nul
+echo.
+echo  ============================================
+echo       PLAYLAB QUEDO PREPARADO EN LA RAIZ
+echo  ============================================
 echo.
 echo SIGUIENTE:
-echo 1. Crea la base de datos MySQL llamada playlab.
-echo 2. Revisa las credenciales de .env.
-echo 3. Ejecuta los comandos indicados en README.md.
+echo 1. Crea una base de datos MySQL llamada playlab.
+echo 2. Edita .env y configura DB_CONNECTION=mysql y tus credenciales.
+echo 3. Ejecuta: php artisan migrate --seed
+echo 4. Ejecuta: php artisan serve
 echo.
+echo La carpeta old y tus archivos personalizados se conservaron.
 pause
 exit /b 0
 
 :error
 echo.
-echo La instalacion no termino correctamente.
-echo Revisa el mensaje de Composer o Robocopy.
-echo El proyecto temporal se conserva en:
-echo %TEMP_PROJECT%
+echo  ============================================
+echo       LA INSTALACION NO TERMINO
+echo  ============================================
+echo.
+echo Revisa el error anterior. No borres manualmente los archivos.
+echo Carpeta del proyecto: %ROOT%
+if exist "%TEMP_PROJECT%\artisan" echo Los archivos temporales se conservan en: %TEMP_PROJECT%
 pause
 exit /b 1
