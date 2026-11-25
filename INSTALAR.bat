@@ -104,10 +104,29 @@ php artisan key:generate --force
 if errorlevel 1 goto error
 
 echo.
-echo [5/5] Instalando y compilando recursos web...
+echo [5/7] Configurando MySQL y creando la base de datos...
+if not exist "%ROOT%scripts\setup-database.php" (
+  echo ERROR: No se encontro scripts\setup-database.php.
+  goto error
+)
+php scripts\setup-database.php
+if errorlevel 1 goto error
+
+echo.
+echo Limpiando configuracion cacheada...
+php artisan config:clear
+if errorlevel 1 goto error
+
+echo.
+echo [6/7] Ejecutando migraciones y cargando datos iniciales...
+php artisan migrate --seed --force
+if errorlevel 1 goto error
+
+echo.
+echo [7/7] Instalando y compilando recursos web...
 where npm >nul 2>nul
 if errorlevel 1 (
-  echo AVISO: npm no aparece en PATH. La instalacion PHP termino.
+  echo AVISO: npm no aparece en PATH. La preparacion PHP y MySQL termino.
   echo Instala Node.js LTS y luego ejecuta: npm install ^&^& npm run build
   goto success
 )
@@ -123,12 +142,14 @@ echo  ============================================
 echo       PLAYLAB QUEDO PREPARADO EN LA RAIZ
 echo  ============================================
 echo.
-echo SIGUIENTE:
-echo 1. Crea una base de datos MySQL llamada playlab.
-echo 2. Edita .env y configura DB_CONNECTION=mysql y tus credenciales.
-echo 3. Ejecuta: php artisan migrate --seed
-echo 4. Ejecuta: php artisan serve
+echo La base de datos MySQL playlab fue creada/verificada por codigo.
+echo Las tablas y los datos iniciales ya fueron cargados.
 echo.
+echo SIGUIENTE:
+echo Ejecuta: php artisan serve
+echo.
+echo Configuracion predeterminada: MySQL de Laragon (root sin contrasena).
+echo Si tu MySQL usa otra clave, ajusta DB_PASSWORD en .env y vuelve a ejecutar INSTALAR.bat.
 echo La carpeta old y tus archivos personalizados se conservaron.
 pause
 exit /b 0
