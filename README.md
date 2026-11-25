@@ -88,15 +88,14 @@ DB_PASSWORD=
 
 Usa las credenciales reales de MySQL. No publiques el archivo `.env`.
 
-Después de preparar Laravel en esta carpeta, ejecuta:
+Cuando el instalador termine, crea la base MySQL `playlab`, ajusta las credenciales de `.env` y ejecuta:
 
 ```bat
-php artisan key:generate
 php artisan migrate --seed
-npm install
-npm run build
 php artisan serve
 ```
+
+Composer y los recursos de Vite ya quedan preparados por `INSTALAR.bat`.
 
 Abre `http://127.0.0.1:8000`.
 
