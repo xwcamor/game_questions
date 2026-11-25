@@ -86,7 +86,7 @@ try {
                     $values[$column] = $row[$column] ?? null;
                 }
 
-                $tableImported += $mysql->table($table)->insertOrIgnore($values);
+                $tableImported += DB::table($table)->insertOrIgnore($values);
             }
 
             if ($tableImported > 0) {
