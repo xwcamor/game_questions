@@ -1,15 +1,23 @@
-# Descargar y preparar PlayLab desde GitHub
+# Instalación de PlayLab en game_questions
 
-El proyecto está en la **carpeta principal** del repositorio. No busques una carpeta `playlab-laravel13`.
+El código actual está en la carpeta principal del repositorio. No existe una subcarpeta `playlab-laravel13`.
+
+## Si ya clonaste el proyecto
+
+Desde Laragon, en `C:\laragon\www\game_questions`:
 
 ```bat
-cd C:\laragon\www
-git clone https://github.com/xwcamor/game_questions.git
-cd game_questions
+git pull origin main
+INSTALAR.bat
 ```
 
-Luego ejecuta `INSTALAR.bat` desde la terminal de Laragon. El script prepara el framework Laravel 13 y combina sus archivos con el código de PlayLab en esta misma carpeta, sin sobrescribir las rutas, vistas, estilos ni seeders personalizados.
+El instalador está corregido para Windows: utiliza `CALL` al ejecutar Composer y npm, reutiliza una descarga temporal de Laravel que haya quedado de un intento anterior y copia los archivos del framework que faltan a la raíz. Los archivos propios del proyecto, `.git` y `old/` se conservan.
 
-Después crea la base MySQL `playlab`, configura `.env` y ejecuta los comandos de migración y compilación que aparecen en `README.md`.
+## Después de instalar
 
-Los archivos antiguos de evaluaciones se conservan en `old/`.
+1. Crea la base de datos MySQL `playlab`.
+2. Configura `DB_CONNECTION=mysql`, `DB_DATABASE=playlab`, `DB_USERNAME` y `DB_PASSWORD` en `.env`.
+3. Ejecuta `php artisan migrate --seed`.
+4. Ejecuta `php artisan serve`.
+
+Consulta `README.md` para las cuentas iniciales, pruebas y configuración completa.
