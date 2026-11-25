@@ -62,7 +62,7 @@ echo Se conservaran todos los archivos existentes de PlayLab y Git.
 REM /XC /XN /XO evita reemplazar archivos que ya existan en el repositorio.
 REM Solo se copian archivos que aun no existen en el destino.
 REM No copiamos vendor, node_modules, .git ni el .env temporal.
-robocopy "%TEMP_PROJECT%" "%ROOT%" /E /COPY:DAT /DCOPY:DAT /R:2 /W:1 /XC /XN /XO /XD .git vendor node_modules /XF .env
+robocopy "%TEMP_PROJECT%" "%ROOT%." /E /COPY:DAT /DCOPY:DAT /R:2 /W:1 /XC /XN /XO /XD .git vendor node_modules /XF .env
 set "ROBOCOPY_CODE=%ERRORLEVEL%"
 if %ROBOCOPY_CODE% GEQ 8 goto error
 
