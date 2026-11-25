@@ -1,0 +1,8 @@
+PlayLab - paquete de aplicación para Laravel 13
+Generado: 25/11/2026
+
+Incluye fuentes PHP, Blade, CSS, JavaScript, migraciones, seeders, instalador y las 40 preguntas de demostración con seis alternativas.
+
+Modo multijugador de esta entrega: sincronización por polling HTTP cada ~1.1 s. El servidor decide inicio, vencimiento del tiempo, validación de respuesta, puntos y cambio de pregunta. No se incluye aún infraestructura WebSocket/Reverb.
+
+No se incluye vendor/ ni framework Laravel; Composer descarga dependencias durante la instalación.
