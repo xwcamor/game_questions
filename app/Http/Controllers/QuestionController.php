@@ -70,7 +70,7 @@ class QuestionController
 
     private function authorizeQuiz(Quiz $quiz): void
     {
-        abort_unless($quiz->user_id===Auth::id() || $quiz->is_template || (Auth::user()->role ?? '')==='admin',403);
+        abort_unless($quiz->user_id===Auth::id() || (Auth::user()->role ?? '')==='admin',403);
     }
 
     private function validateQuestion(Request $request): array
